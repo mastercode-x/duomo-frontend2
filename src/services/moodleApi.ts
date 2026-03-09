@@ -1165,38 +1165,68 @@ class MoodleApiClient {
   async getAllStudents(teacherCourses: Course[]): Promise<User[]> {
     const allStudents = new Map<number, User>();
     
-    // Roles que deben ser EXCLUIDOS explícitamente (nunca mostrar en listas de estudiantes)
-    const EXCLUDED_ROLES = new Set([
-      'editingteacher', 'teacher', 'manager', 'supervisor', 'guest', 'admin'
+    // Roles que deben ser EXCLUIDOS (shortname)
+    const EXCLUDED_ROLE_SHORTNAMES = new Set([
+      'editingteacher', 'teacher', 'manager', 'supervisor', 'guest', 'admin',
+      'coursecreator', 'frontpage'
     ]);
+
+    // IDs numéricos de roles que deben ser EXCLUIDOS en Moodle estándar:
+    // 1=manager, 2=coursecreator, 3=editingteacher, 4=teacher, 5=student, 6=guest, 7=frontpage
+    const EXCLUDED_ROLE_IDS = new Set([1, 2, 3, 4, 6, 7]);
 
     for (const course of teacherCourses) {
       try {
-        const enrolled = await this.getEnrolledUsers(course.id);
+        // Obtener usuarios matriculados con datos crudos (antes de transformUser)
+        const rawData = await this.request<any[]>('core_enrol_get_enrolled_users', { courseid: course.id });
         
-        if (Array.isArray(enrolled)) {
-          enrolled.forEach(user => {
-            // Verificar POSITIVAMENTE que el usuario tiene rol 'student'
-            // y que NO tiene ningún rol excluido.
-            const userRoles: string[] = (user.roles || []).map((r: any) =>
-              typeof r === 'string' ? r : (r.shortname || '')
-            );
-            const hasStudentRole = userRoles.includes('student');
-            const hasExcludedRole = userRoles.some(r => EXCLUDED_ROLES.has(r));
-            const isStudent = hasStudentRole && !hasExcludedRole;
-            
-            if (isStudent && !allStudents.has(user.id)) {
-              allStudents.set(user.id, {
-                ...user,
-                enrolledCourses: [course],
-              } as User);
-            } else if (isStudent && allStudents.has(user.id)) {
-              const existing = allStudents.get(user.id)!;
-              if (!existing.enrolledCourses) existing.enrolledCourses = [];
-              existing.enrolledCourses.push(course);
-            }
+        if (!Array.isArray(rawData)) continue;
+
+        rawData.forEach((rawUser: any) => {
+          // Extraer roles del usuario (pueden venir como array de objetos con shortname/roleid)
+          const rawRoles: any[] = Array.isArray(rawUser.roles) ? rawUser.roles : [];
+
+          // Verificar exclusión por shortname
+          const hasExcludedShortname = rawRoles.some((r: any) => {
+            const sn = (r.shortname || '').toLowerCase();
+            return EXCLUDED_ROLE_SHORTNAMES.has(sn);
           });
-        }
+
+          // Verificar exclusión por roleid numérico
+          const hasExcludedRoleId = rawRoles.some((r: any) => {
+            const rid = typeof r.roleid === 'number' ? r.roleid : parseInt(r.roleid, 10);
+            return EXCLUDED_ROLE_IDS.has(rid);
+          });
+
+          // Si tiene roles y alguno es excluido, saltar este usuario
+          if (rawRoles.length > 0 && (hasExcludedShortname || hasExcludedRoleId)) {
+            return;
+          }
+
+          // Si no tiene roles en el array pero el campo 'roles' es un array vacío,
+          // verificar si tiene rol de estudiante por otros campos (e.g. 'student' en groups)
+          // En ese caso, incluirlo (es un estudiante sin rol explícito en la respuesta)
+
+          const user = this.transformUser(rawUser);
+
+          // Doble verificación post-transform con shortnames
+          const transformedRoles: string[] = user.roles as unknown as string[];
+          const hasExcludedTransformed = transformedRoles.some(r =>
+            EXCLUDED_ROLE_SHORTNAMES.has((r || '').toLowerCase())
+          );
+          if (hasExcludedTransformed) return;
+
+          if (!allStudents.has(user.id)) {
+            allStudents.set(user.id, {
+              ...user,
+              enrolledCourses: [course],
+            } as User);
+          } else {
+            const existing = allStudents.get(user.id)!;
+            if (!existing.enrolledCourses) existing.enrolledCourses = [];
+            existing.enrolledCourses.push(course);
+          }
+        });
       } catch (error) {
         console.warn(`Error al obtener estudiantes del curso ${course.id}:`, error);
       }

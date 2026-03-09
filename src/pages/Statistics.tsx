@@ -56,15 +56,16 @@ const ITEMS_PER_PAGE = 20;
 function ExpandableSucursales({ sucursalIndices }: { sucursalIndices?: string }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const sucursales = getSucursalNames(sucursalIndices);
-  const showCollapse = sucursales.length > 5;
+  const showToggle = sucursales.length > 5;
   const visibleSucursales = isExpanded ? sucursales : sucursales.slice(0, 5);
+  const hiddenCount = sucursales.length - 5;
 
   return (
     <div className="flex flex-col gap-1">
       {visibleSucursales.map((name, idx) => (
-        <Badge key={idx} variant="outline" className="text-xs w-fit">
-          <Building2 className="w-3 h-3 mr-1" />
-          {name}
+        <Badge key={idx} variant="outline" className="text-xs w-fit max-w-[200px] truncate">
+          <Building2 className="w-3 h-3 mr-1 flex-shrink-0" />
+          <span className="truncate">{name}</span>
         </Badge>
       ))}
       {sucursales.length === 0 && (
@@ -72,12 +73,16 @@ function ExpandableSucursales({ sucursalIndices }: { sucursalIndices?: string })
           No asignada
         </Badge>
       )}
-      {showCollapse && (
+      {showToggle && (
         <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="text-xs text-blue-600 hover:text-blue-700 font-medium mt-1 text-left"
+          onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
+          className="text-xs text-blue-600 hover:text-blue-800 font-semibold mt-1 text-left flex items-center gap-1 transition-colors"
         >
-          {isExpanded ? `- Mostrar menos (${sucursales.length - 5} ocultas)` : `+ Mostrar todas (${sucursales.length})`}
+          {isExpanded ? (
+            <>▲ Mostrar menos</>
+          ) : (
+            <>▼ +{hiddenCount} más</>
+          )}
         </button>
       )}
     </div>
@@ -157,6 +162,10 @@ export function Statistics() {
         })
         .filter(s => {
           if (!teacherSucursalIndices) return false;
+          // Excluir usuarios que tienen el índice 95 (Supervisor) en sus sucursales
+          // ya que ese índice identifica a supervisores/admins en el sistema
+          const userIndices = (s.sucursalIndices || '').split(',').map(i => i.trim());
+          if (userIndices.includes('95')) return false;
           return sharesBranch(teacherSucursalIndices, s.sucursalIndices);
         });
 

@@ -17,7 +17,6 @@ import {
   GraduationCap,
   Users,
   Search,
-  Sparkles,
   ChevronLeft,
   ChevronRight,
   Home,
@@ -38,6 +37,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
+import { DuomoLogo } from '@/components/DuomoLogo';
 import type { UserRole } from '@/types';
 
 interface NavItem {
@@ -150,15 +150,11 @@ export function MainLayout({ children }: MainLayoutProps) {
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 py-5 border-b border-gray-100">
-        <div className="w-10 h-10 bg-gradient-to-br from-[#8B9A7D] to-[#6B7A5D] rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-          <Sparkles className="w-5 h-5 text-white" />
-        </div>
-        {isSidebarOpen && (
-          <div className="flex-1 min-w-0">
-            <p className="font-bold text-gray-900 truncate">Campus Duomo</p>
-            <p className="text-xs text-gray-500">LMS</p>
-          </div>
+      <div className="flex items-center justify-center px-4 py-4 border-b border-gray-100">
+        {isSidebarOpen ? (
+          <DuomoLogo className="h-10 w-auto object-contain" />
+        ) : (
+          <DuomoLogo className="h-8 w-8 object-contain" />
         )}
       </div>
 
