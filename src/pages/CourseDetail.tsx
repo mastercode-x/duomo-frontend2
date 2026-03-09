@@ -10,23 +10,27 @@ import {
   CheckCircle2, 
   PlayCircle, 
   FileText, 
+  MoreVertical,
+  Edit,
   BarChart3,
   Star,
+  Share2,
+  Download,
+  MessageSquare,
   Award,
-  AlertCircle,
-  GraduationCap,
-  ChevronRight,
-  ChevronLeft
+  AlertCircle
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { moodleApi } from '@/services/moodleApi';
 import type { CourseDetail as CourseDetailType } from '@/types';
@@ -114,12 +118,13 @@ export function CourseDetail() {
     return labels[modname] || modname;
   };
 
-  // Navegar a un módulo específico
-  const navigateToModule = (sectionIndex: number) => {
-    if (course && course.sections && course.sections[sectionIndex]) {
-      const section = course.sections[sectionIndex];
-      navigate(`/courses/${course.id}/modules/${section.id}`);
-    }
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   if (isLoading) {
@@ -190,16 +195,15 @@ export function CourseDetail() {
               {isTeacher ? (
                 <>
                   <Button variant="secondary" asChild>
+                    <Link to={`/courses/${course.id}/edit`}>
+                      <Edit className="w-4 h-4 mr-2" />
+                      Editar Curso
+                    </Link>
+                  </Button>
+                  <Button variant="secondary" asChild>
                     <Link to={`/courses/${course.id}/stats`}>
                       <BarChart3 className="w-4 h-4 mr-2" />
                       Estadísticas
-                    </Link>
-                  </Button>
-                  {/* Nuevo botón para ver calificaciones del curso */}
-                  <Button variant="secondary" asChild>
-                    <Link to={`/grades?course=${course.id}`}>
-                      <GraduationCap className="w-4 h-4 mr-2" />
-                      Calificaciones
                     </Link>
                   </Button>
                 </>
@@ -209,26 +213,41 @@ export function CourseDetail() {
                   Favorito
                 </Button>
               )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="secondary" size="icon">
+                    <MoreVertical className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem>
+                    <Share2 className="w-4 h-4 mr-2" />
+                    Compartir
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Download className="w-4 h-4 mr-2" />
+                    Descargar contenido
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Course Stats - Sin Total de estudiantes ni Días activo para teacher */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {!isTeacher && (
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Users className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{course.enrolledusercount || 0}</p>
-                <p className="text-xs text-gray-500">Estudiantes</p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+      {/* Course Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Users className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{course.enrolledusercount || 0}</p>
+              <p className="text-xs text-gray-500">Estudiantes</p>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
@@ -244,24 +263,22 @@ export function CourseDetail() {
           </CardContent>
         </Card>
 
-        {!isTeacher && (
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-                <Clock className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">
-                  {course.startdate 
-                    ? Math.ceil((Date.now() / 1000 - course.startdate) / (24 * 60 * 60))
-                    : 0
-                  }
-                </p>
-                <p className="text-xs text-gray-500">Días activo</p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+              <Clock className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">
+                {course.startdate 
+                  ? Math.ceil((Date.now() / 1000 - course.startdate) / (24 * 60 * 60))
+                  : 0
+                }
+              </p>
+              <p className="text-xs text-gray-500">Días activo</p>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
@@ -395,20 +412,6 @@ export function CourseDetail() {
                           );
                         })}
                       </div>
-
-                      {/* Botón para ver módulo completo */}
-                      <div className="mt-4 pt-4 border-t border-gray-100">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="w-full"
-                          onClick={() => navigateToModule(index)}
-                        >
-                          <PlayCircle className="w-4 h-4 mr-2" />
-                          Ver módulo completo
-                          <ChevronRight className="w-4 h-4 ml-auto" />
-                        </Button>
-                      </div>
                     </AccordionContent>
                   </AccordionItem>
                 ))}
@@ -451,7 +454,7 @@ export function CourseDetail() {
 
         {/* Right Column - Sidebar */}
         <div className="space-y-6">
-          {/* Course Actions - Sin Foro del curso para teacher */}
+          {/* Course Actions */}
           <Card>
             <CardHeader>
               <CardTitle>Acciones</CardTitle>
@@ -463,13 +466,10 @@ export function CourseDetail() {
                   {course.progress && course.progress > 0 ? 'Continuar' : 'Iniciar Curso'}
                 </Button>
               )}
-              {/* Foro del curso solo para estudiantes */}
-              {!isTeacher && (
-                <Button variant="outline" className="w-full">
-                  <MessageSquare className="w-4 h-4 mr-2" />
-                  Foro del Curso
-                </Button>
-              )}
+              <Button variant="outline" className="w-full">
+                <MessageSquare className="w-4 h-4 mr-2" />
+                Foro del Curso
+              </Button>
               <Button variant="outline" className="w-full">
                 <Award className="w-4 h-4 mr-2" />
                 Ver Certificado
@@ -477,38 +477,58 @@ export function CourseDetail() {
             </CardContent>
           </Card>
 
-          {/* Course Dates - Solo para estudiantes */}
-          {!isTeacher && (
+          {/* Instructor Info */}
+          {isTeacher && (
             <Card>
               <CardHeader>
-                <CardTitle>Fechas Importantes</CardTitle>
+                <CardTitle>Instructor</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {course.startdate && (
-                  <div className="flex items-center gap-3">
-                    <Clock className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <p className="text-sm text-gray-500">Inicio</p>
-                      <p className="font-medium">
-                        {new Date(course.startdate * 1000).toLocaleDateString('es-ES')}
-                      </p>
-                    </div>
+              <CardContent>
+                <div className="flex items-center gap-3">
+                  <Avatar className="w-12 h-12">
+                    <AvatarFallback className="bg-gradient-to-br from-amber-500 to-orange-600 text-white">
+                      {getInitials(course.fullname)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">Instructor del Curso</p>
+                    <p className="text-sm text-gray-500">Heladería Duomo</p>
                   </div>
-                )}
-                {course.enddate && (
-                  <div className="flex items-center gap-3">
-                    <Clock className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <p className="text-sm text-gray-500">Fin</p>
-                      <p className="font-medium">
-                        {new Date(course.enddate * 1000).toLocaleDateString('es-ES')}
-                      </p>
-                    </div>
-                  </div>
-                )}
+                </div>
               </CardContent>
             </Card>
           )}
+
+          {/* Course Dates */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Fechas Importantes</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {course.startdate && (
+                <div className="flex items-center gap-3">
+                  <Clock className="w-5 h-5 text-gray-400" />
+                  <div>
+                    <p className="text-sm text-gray-500">Inicio</p>
+                    <p className="font-medium">
+                      {new Date(course.startdate * 1000).toLocaleDateString('es-ES')}
+                    </p>
+                  </div>
+                </div>
+              )}
+              {course.enddate && (
+                <div className="flex items-center gap-3">
+                  <Clock className="w-5 h-5 text-gray-400" />
+                  <div>
+                    <p className="text-sm text-gray-500">Fin</p>
+                    <p className="font-medium">
+                      {new Date(course.enddate * 1000).toLocaleDateString('es-ES')}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
@@ -523,8 +543,8 @@ function CourseDetailSkeleton() {
       
       <Skeleton className="h-64 w-full rounded-xl" />
       
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {[1, 2, 3].map((i) => (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map((i) => (
           <Card key={i}>
             <CardContent className="p-4">
               <Skeleton className="h-10 w-20" />
@@ -551,11 +571,5 @@ function CourseDetailSkeleton() {
     </div>
   );
 }
-
-// Importar iconos adicionales
-import { 
-  MessageSquare, 
-  Edit 
-} from 'lucide-react';
 
 export default CourseDetail;
