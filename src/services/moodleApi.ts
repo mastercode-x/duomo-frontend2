@@ -367,8 +367,14 @@ class MoodleApiClient {
           lastname: siteInfo.lastname || userInfo.lastname || '',
           fullname: siteInfo.fullname || `${userInfo.firstname || ''} ${userInfo.lastname || ''}`.trim(),
           email: userInfo.email || '',
-          profileimageurl: siteInfo.userpictureurl || userInfo.profileimageurl,
-          profileimageurlsmall: userInfo.profileimageurlsmall,
+          profileimageurl: this.addTokenToPluginfileUrl(
+            siteInfo.userpictureurl || userInfo.profileimageurl || '',
+            data.token
+          ),
+          profileimageurlsmall: this.addTokenToPluginfileUrl(
+            userInfo.profileimageurlsmall || '',
+            data.token
+          ),
           department: userInfo.department,
           institution: userInfo.institution,
           city: userInfo.city,
@@ -613,22 +619,32 @@ class MoodleApiClient {
 
   async getCourseById(courseid: number): Promise<CourseDetail | null> {
     try {
-      // Usar core_course_get_courses_by_field en lugar de core_course_get_courses
-      // porque core_course_get_courses devuelve "nopermissions" para usuarios no-admin
-      const courseInfo = await this.request<any>('core_course_get_courses_by_field', {
-        field: 'id',
-        value: courseid
-      });
-      
-      // Validación defensiva
-      if (!courseInfo || !courseInfo.courses || !Array.isArray(courseInfo.courses) || courseInfo.courses.length === 0) {
+      // IMPORTANTE: NO usar core_course_get_courses_by_field (devuelve invalidresponse/nopermissions
+      // para usuarios no-admin). Usar core_enrol_get_users_courses para obtener los datos del curso
+      // desde la lista de cursos del usuario, que siempre funciona.
+      const contents = await this.getCourseContent(courseid);
+
+      const userId = this.getUserId();
+      if (!userId) {
+        console.warn('getCourseById: No hay usuario autenticado');
         return null;
       }
-      
-      // Obtener contenido/módulos del curso
-      const contents = await this.getCourseContent(courseid);
-      
-      return this.transformCourseDetail(courseInfo.courses[0], contents);
+
+      const userCourses = await this.request<any[]>('core_enrol_get_users_courses', {
+        userid: userId
+      });
+
+      if (!Array.isArray(userCourses)) {
+        return null;
+      }
+
+      const courseData = userCourses.find((c: any) => c.id === courseid);
+      if (!courseData) {
+        console.warn(`getCourseById: Curso ${courseid} no encontrado en cursos del usuario`);
+        return null;
+      }
+
+      return this.transformCourseDetail(courseData, contents);
     } catch (error) {
       console.warn('Error al obtener curso por ID:', error);
       return null;

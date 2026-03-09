@@ -52,6 +52,38 @@ interface StudentActivity {
 
 const ITEMS_PER_PAGE = 20;
 
+// Componente para mostrar sucursales con colapso si hay más de 5
+function ExpandableSucursales({ sucursalIndices }: { sucursalIndices?: string }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const sucursales = getSucursalNames(sucursalIndices);
+  const showCollapse = sucursales.length > 5;
+  const visibleSucursales = isExpanded ? sucursales : sucursales.slice(0, 5);
+
+  return (
+    <div className="flex flex-col gap-1">
+      {visibleSucursales.map((name, idx) => (
+        <Badge key={idx} variant="outline" className="text-xs w-fit">
+          <Building2 className="w-3 h-3 mr-1" />
+          {name}
+        </Badge>
+      ))}
+      {sucursales.length === 0 && (
+        <Badge variant="outline" className="text-xs w-fit text-gray-400">
+          No asignada
+        </Badge>
+      )}
+      {showCollapse && (
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="text-xs text-blue-600 hover:text-blue-700 font-medium mt-1 text-left"
+        >
+          {isExpanded ? `- Mostrar menos (${sucursales.length - 5} ocultas)` : `+ Mostrar todas (${sucursales.length})`}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function Statistics() {
   const { isTeacher, user: teacherUser } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
@@ -514,19 +546,7 @@ export function Statistics() {
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          <div className="flex flex-col gap-1">
-                            {getSucursalNames(student.sucursalIndices).map((name, idx) => (
-                              <Badge key={idx} variant="outline" className="text-xs w-fit">
-                                <Building2 className="w-3 h-3 mr-1" />
-                                {name}
-                              </Badge>
-                            ))}
-                            {getSucursalNames(student.sucursalIndices).length === 0 && (
-                              <Badge variant="outline" className="text-xs w-fit text-gray-400">
-                                No asignada
-                              </Badge>
-                            )}
-                          </div>
+                          <ExpandableSucursales sucursalIndices={student.sucursalIndices} />
                         </td>
                         <td className="py-3 px-4 text-center">
                           <span className="text-sm text-gray-600">{student.coursesCount}</span>
