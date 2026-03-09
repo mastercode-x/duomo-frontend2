@@ -103,7 +103,7 @@ export function Statistics() {
       const studentsWithActivity: StudentActivity[] = allStudentsData.map(student => {
         const sucursalField = student.customfields?.find((f: { shortname: string; value: string }) => f.shortname === 'sucursales');
         const coursesCount = student.enrolledCourses?.length || 0;
-        const progress = student.enrolledCourses?.reduce((sum, c) => sum + (c.progress || 0), 0) / (coursesCount || 1);
+        const progress = (student.enrolledCourses?.reduce((sum, c) => sum + (c.progress || 0), 0) ?? 0) / (coursesCount || 1);
         const lastActivity = student.lastaccess || student.lastcourseaccess || 0;
         
         // Calcular score de actividad (0-100)
