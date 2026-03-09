@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/context/AuthContext';
 import { moodleApi } from '@/services/moodleApi';
+import { sharesBranch, buildSucursalOptions } from '@/lib/sucursales';
 import type { Grade, Course } from '@/types';
 import {
   LineChart,
@@ -37,28 +38,19 @@ import {
 } from 'recharts';
 import { useSearchParams } from 'react-router-dom';
 
-// Lista de sucursales
-const SUCURSALES = [
-  { id: '1', name: 'Sucursal Central' },
-  { id: '2', name: 'Sucursal Norte' },
-  { id: '3', name: 'Sucursal Sur' },
-  { id: '4', name: 'Sucursal Este' },
-  { id: '5', name: 'Sucursal Oeste' },
-  { id: '6', name: 'Sucursal Centro' },
-  { id: '7', name: 'Sucursal Industrial' },
-  { id: '8', name: 'Sucursal Comercial' },
-];
-
 const ITEMS_PER_PAGE = 20;
 
 export function Grades() {
-  const { isTeacher } = useAuth();
+  const { isTeacher, user: teacherUser } = useAuth();
   const [searchParams] = useSearchParams();
   const courseFilterFromUrl = searchParams.get('course');
   
   const [grades, setGrades] = useState<Grade[]>([]);
   const [filteredGrades, setFilteredGrades] = useState<Grade[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
+  // Para teachers: lista de IDs de estudiantes que comparten sucursal con el profesor
+  const [allowedStudentIds, setAllowedStudentIds] = useState<Set<number> | null>(null);
+  const [sucursalOptions, setSucursalOptions] = useState<{ value: string; label: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCourse, setSelectedCourse] = useState<string>(courseFilterFromUrl || 'all');
   const [selectedSucursal, setSelectedSucursal] = useState<string>('all');
@@ -83,14 +75,43 @@ export function Grades() {
     try {
       setIsLoading(true);
       
-      // Obtener cursos y calificaciones en paralelo
-      const [coursesData, gradesData] = await Promise.all([
-        moodleApi.getUserCourses(),
-        moodleApi.getAllUserGrades(),
-      ]);
+      const coursesData = await moodleApi.getUserCourses();
+      const safeCoursesData = Array.isArray(coursesData) ? coursesData : [];
+      setCourses(safeCoursesData);
 
-      setCourses(Array.isArray(coursesData) ? coursesData : []);
-      setGrades(Array.isArray(gradesData) ? gradesData : []);
+      if (isTeacher) {
+        // Para teachers: cargar estudiantes filtrados por sucursal compartida
+        const teacherSucursalIndices = teacherUser?.customfields?.find(
+          f => f.shortname === 'sucursales'
+        )?.value;
+
+        const allStudentsData = await moodleApi.getAllStudents(safeCoursesData);
+        const filteredStudents = allStudentsData.filter(student => {
+          const studentSucursal = student.customfields?.find(
+            f => f.shortname === 'sucursales'
+          )?.value;
+          return sharesBranch(teacherSucursalIndices, studentSucursal);
+        });
+
+        // Guardar los IDs de estudiantes permitidos para filtrar calificaciones
+        setAllowedStudentIds(new Set(filteredStudents.map(s => s.id)));
+
+        // Construir opciones dinámicas de sucursal
+        const options = buildSucursalOptions(
+          filteredStudents.map(s =>
+            s.customfields?.find(f => f.shortname === 'sucursales')?.value
+          )
+        );
+        setSucursalOptions(options);
+
+        // Obtener calificaciones de los cursos del profesor
+        const gradesData = await moodleApi.getAllUserGrades();
+        setGrades(Array.isArray(gradesData) ? gradesData : []);
+      } else {
+        // Para estudiantes: solo sus propias calificaciones
+        const gradesData = await moodleApi.getAllUserGrades();
+        setGrades(Array.isArray(gradesData) ? gradesData : []);
+      }
     } catch (error) {
       console.error('Error al cargar calificaciones:', error);
       setGrades([]);
@@ -117,11 +138,11 @@ export function Grades() {
       );
     }
 
-    // Filtrar por sucursal (solo para teachers)
-    if (isTeacher && selectedSucursal !== 'all') {
-      // Aquí se filtraría por sucursal si los datos de calificación incluyeran esa info
-      // Por ahora es un placeholder para la funcionalidad
-    }
+    // Para teachers: filtrar calificaciones solo de estudiantes de su sucursal
+    // Nota: las calificaciones del endpoint gradereport_user_get_grade_items no incluyen
+    // el userid del estudiante directamente, por lo que el filtrado principal ya se hace
+    // al cargar solo los cursos del profesor. El filtro de sucursal adicional aquí es
+    // un marcador para futuras mejoras cuando se obtengan calificaciones por estudiante.
 
     setFilteredGrades(result);
   };
@@ -385,9 +406,9 @@ export function Grades() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas las sucursales</SelectItem>
-                      {SUCURSALES.map(sucursal => (
-                        <SelectItem key={sucursal.id} value={sucursal.name}>
-                          {sucursal.name}
+                      {sucursalOptions.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
                         </SelectItem>
                       ))}
                     </SelectContent>

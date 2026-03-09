@@ -5,11 +5,9 @@ import { Link } from 'react-router-dom';
 import { 
   Users, 
   Search, 
-  Mail, 
   BookOpen, 
   Clock,
   ChevronRight,
-  Filter,
   Building2,
   ChevronLeft,
   ChevronFirst,
@@ -24,31 +22,22 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/context/AuthContext';
 import { moodleApi } from '@/services/moodleApi';
+import { getSucursalLabel, getSucursalNames, sharesBranch, buildSucursalOptions } from '@/lib/sucursales';
 import type { User, Course } from '@/types';
 
 interface StudentWithCourses extends User {
   enrolledCourses?: Course[];
-  sucursal?: string;
+  sucursalIndices?: string;   // índices crudos del customfield
+  sucursalLabel?: string;     // nombre(s) legible(s) para mostrar
 }
-
-// Lista de sucursales (ejemplo - debería venir de la API)
-const SUCURSALES = [
-  { id: '1', name: 'Sucursal Central' },
-  { id: '2', name: 'Sucursal Norte' },
-  { id: '3', name: 'Sucursal Sur' },
-  { id: '4', name: 'Sucursal Este' },
-  { id: '5', name: 'Sucursal Oeste' },
-  { id: '6', name: 'Sucursal Centro' },
-  { id: '7', name: 'Sucursal Industrial' },
-  { id: '8', name: 'Sucursal Comercial' },
-];
 
 const ITEMS_PER_PAGE = 20;
 
 export function Students() {
-  const { isTeacher } = useAuth();
+  const { isTeacher, user: teacherUser } = useAuth();
   const [students, setStudents] = useState<StudentWithCourses[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<StudentWithCourses[]>([]);
+  const [sucursalOptions, setSucursalOptions] = useState<{ value: string; label: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSucursal, setSelectedSucursal] = useState<string>('all');
@@ -74,6 +63,11 @@ export function Students() {
     try {
       setIsLoading(true);
       
+      // Obtener sucursales del profesor logueado
+      const teacherSucursalIndices = teacherUser?.customfields?.find(
+        f => f.shortname === 'sucursales'
+      )?.value;
+
       // Obtener cursos del profesor
       const teacherCourses = await moodleApi.getUserCourses();
       
@@ -82,17 +76,30 @@ export function Students() {
         return;
       }
       
-      // Obtener todos los estudiantes de los cursos del profesor
+      // Obtener todos los estudiantes (ya filtrados por rol=student en moodleApi)
       const allStudents = await moodleApi.getAllStudents(teacherCourses);
       
-      // Enriquecer datos con sucursal de customfields
-      const studentsWithSucursal = allStudents.map(student => {
-        const sucursalField = student.customfields?.find(f => f.shortname === 'sucursales');
-        return {
-          ...student,
-          sucursal: sucursalField?.value || 'No asignada'
-        };
-      });
+      // Enriquecer con datos de sucursal y filtrar por intersección de sucursales
+      const studentsWithSucursal: StudentWithCourses[] = allStudents
+        .map(student => {
+          const sucursalField = student.customfields?.find(f => f.shortname === 'sucursales');
+          const sucursalIndices = sucursalField?.value || '';
+          return {
+            ...student,
+            sucursalIndices,
+            sucursalLabel: getSucursalLabel(sucursalIndices),
+          };
+        })
+        .filter(student => {
+          // Si el profesor no tiene sucursales asignadas, no mostrar ningún estudiante
+          if (!teacherSucursalIndices) return false;
+          // Solo mostrar estudiantes que compartan al menos una sucursal con el profesor
+          return sharesBranch(teacherSucursalIndices, student.sucursalIndices);
+        });
+      
+      // Construir opciones de sucursal dinámicamente a partir de los estudiantes cargados
+      const options = buildSucursalOptions(studentsWithSucursal.map(s => s.sucursalIndices));
+      setSucursalOptions(options);
       
       setStudents(studentsWithSucursal);
     } catch (error) {
@@ -112,13 +119,19 @@ export function Students() {
       result = result.filter(student => 
         student.fullname?.toLowerCase().includes(query) ||
         student.email?.toLowerCase().includes(query) ||
-        student.sucursal?.toLowerCase().includes(query)
+        student.sucursalLabel?.toLowerCase().includes(query)
       );
     }
 
-    // Filtrar por sucursal
+    // Filtrar por sucursal (por índice)
     if (selectedSucursal !== 'all') {
-      result = result.filter(student => student.sucursal === selectedSucursal);
+      result = result.filter(student => {
+        if (!student.sucursalIndices) return false;
+        return student.sucursalIndices
+          .split(',')
+          .map(i => i.trim())
+          .includes(selectedSucursal);
+      });
     }
 
     setFilteredStudents(result);
@@ -201,9 +214,9 @@ export function Students() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas las sucursales</SelectItem>
-                {SUCURSALES.map(sucursal => (
-                  <SelectItem key={sucursal.id} value={sucursal.name}>
-                    {sucursal.name}
+                {sucursalOptions.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -262,10 +275,19 @@ export function Students() {
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          <Badge variant="outline" className="text-xs">
-                            <Building2 className="w-3 h-3 mr-1" />
-                            {student.sucursal || 'No asignada'}
-                          </Badge>
+                          <div className="flex flex-col gap-1">
+                            {getSucursalNames(student.sucursalIndices).map((name, idx) => (
+                              <Badge key={idx} variant="outline" className="text-xs w-fit">
+                                <Building2 className="w-3 h-3 mr-1" />
+                                {name}
+                              </Badge>
+                            ))}
+                            {(!student.sucursalIndices || getSucursalNames(student.sucursalIndices).length === 0) && (
+                              <Badge variant="outline" className="text-xs w-fit text-gray-400">
+                                No asignada
+                              </Badge>
+                            )}
+                          </div>
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-1">
@@ -339,7 +361,6 @@ export function Students() {
                     
                     <div className="flex items-center gap-1 px-2">
                       {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        // Mostrar páginas alrededor de la página actual
                         let pageNum;
                         if (totalPages <= 5) {
                           pageNum = i + 1;

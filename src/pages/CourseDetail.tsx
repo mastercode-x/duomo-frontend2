@@ -52,26 +52,25 @@ export function CourseDetail() {
       setIsLoading(true);
       setError(null);
       
+      // getCourseById ya obtiene internamente el contenido del curso y lo transforma.
+      // No llamar a getCourseContent por separado para evitar sobreescribir las secciones
+      // ya procesadas con datos crudos de la API.
       const courseData = await moodleApi.getCourseById(id);
-      const courseContent = await moodleApi.getCourseContent(id);
       
       if (!courseData) {
-        setError('No se pudo cargar el curso');
+        setError('No se pudo cargar el curso. Verifica que el curso exista y que tu cuenta tenga acceso.');
         return;
       }
       
-      setCourse({
-        ...courseData,
-        sections: courseContent,
-      });
+      setCourse(courseData);
       
       // Expandir primera sección por defecto
-      if (courseContent.length > 0) {
-        setExpandedSections([`section-${courseContent[0].id}`]);
+      if (courseData.sections && courseData.sections.length > 0) {
+        setExpandedSections([`section-${courseData.sections[0].id}`]);
       }
     } catch (err: any) {
       console.error('Error al cargar curso:', err);
-      setError('Error al cargar el curso. Por favor intenta de nuevo.');
+      setError(err?.error || err?.message || 'Error al cargar el curso. Por favor intenta de nuevo.');
     } finally {
       setIsLoading(false);
     }

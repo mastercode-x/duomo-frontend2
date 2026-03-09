@@ -1149,16 +1149,25 @@ class MoodleApiClient {
   async getAllStudents(teacherCourses: Course[]): Promise<User[]> {
     const allStudents = new Map<number, User>();
     
+    // Roles que deben ser EXCLUIDOS explícitamente (nunca mostrar en listas de estudiantes)
+    const EXCLUDED_ROLES = new Set([
+      'editingteacher', 'teacher', 'manager', 'supervisor', 'guest', 'admin'
+    ]);
+
     for (const course of teacherCourses) {
       try {
         const enrolled = await this.getEnrolledUsers(course.id);
         
         if (Array.isArray(enrolled)) {
           enrolled.forEach(user => {
-            // Solo agregar estudiantes (no teachers)
-            const isStudent = !user.roles?.some((r: any) => 
-              ['editingteacher', 'teacher', 'manager'].includes(r.shortname || r)
+            // Verificar POSITIVAMENTE que el usuario tiene rol 'student'
+            // y que NO tiene ningún rol excluido.
+            const userRoles: string[] = (user.roles || []).map((r: any) =>
+              typeof r === 'string' ? r : (r.shortname || '')
             );
+            const hasStudentRole = userRoles.includes('student');
+            const hasExcludedRole = userRoles.some(r => EXCLUDED_ROLES.has(r));
+            const isStudent = hasStudentRole && !hasExcludedRole;
             
             if (isStudent && !allStudents.has(user.id)) {
               allStudents.set(user.id, {
@@ -1345,6 +1354,7 @@ class MoodleApiClient {
   // ============================================
 
   private transformUser(data: any): User {
+    const token = this.getToken();
     return {
       id: data.id,
       username: data.username || '',
@@ -1352,8 +1362,8 @@ class MoodleApiClient {
       lastname: data.lastname || '',
       fullname: data.fullname || `${data.firstname || ''} ${data.lastname || ''}`.trim(),
       email: data.email || '',
-      profileimageurl: data.profileimageurl,
-      profileimageurlsmall: data.profileimageurlsmall,
+      profileimageurl: this.addTokenToPluginfileUrl(data.profileimageurl, token),
+      profileimageurlsmall: this.addTokenToPluginfileUrl(data.profileimageurlsmall, token),
       department: data.department,
       institution: data.institution,
       city: data.city,
@@ -1380,6 +1390,14 @@ class MoodleApiClient {
   }
 
   private transformCourse(data: any): Course {
+    // Las imágenes de Moodle requieren autenticación. Convertir URLs de pluginfile.php
+    // al endpoint webservice/pluginfile.php con el token del usuario.
+    const token = this.getToken();
+    const rawImageUrl: string | undefined = data.overviewfiles?.[0]?.fileurl;
+    const courseimage = rawImageUrl
+      ? this.addTokenToPluginfileUrl(rawImageUrl, token)
+      : undefined;
+
     return {
       id: data.id,
       shortname: data.shortname || '',
@@ -1396,13 +1414,37 @@ class MoodleApiClient {
       completed: data.completed,
       enrolledusercount: data.enrolledusercount,
       overviewfiles: data.overviewfiles,
-      courseimage: data.overviewfiles?.[0]?.fileurl,
+      courseimage,
       completionhascriteria: data.completionhascriteria,
       completionusertracked: data.completionusertracked,
       lastaccess: data.lastaccess,
       isfavourite: data.isfavourite,
       hidden: data.hidden,
     };
+  }
+
+  /**
+   * Convierte una URL de pluginfile.php al endpoint autenticado webservice/pluginfile.php
+   * y agrega el token del usuario. Si la URL ya usa webservice/pluginfile.php o no es
+   * de pluginfile, la devuelve sin cambios.
+   */
+  private addTokenToPluginfileUrl(url: string, token: string): string {
+    if (!url || !token) return url || '';
+    // Reemplazar /pluginfile.php por /webservice/pluginfile.php si es necesario
+    let result = url.replace(
+      /\/pluginfile\.php(?!\/)/,
+      '/pluginfile.php'
+    );
+    // Si la URL tiene /pluginfile.php pero NO /webservice/pluginfile.php, convertirla
+    if (result.includes('/pluginfile.php') && !result.includes('/webservice/pluginfile.php')) {
+      result = result.replace('/pluginfile.php', '/webservice/pluginfile.php');
+    }
+    // Agregar token si no lo tiene ya
+    if (!result.includes('token=')) {
+      const separator = result.includes('?') ? '&' : '?';
+      result = `${result}${separator}token=${encodeURIComponent(token)}`;
+    }
+    return result;
   }
 
   private transformCourseDetail(data: any, contents: any[] = []): CourseDetail {

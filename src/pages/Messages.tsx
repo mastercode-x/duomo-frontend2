@@ -1,4 +1,5 @@
 // Página de Mensajes del Campus Duomo LMS - Centro de mensajes interno
+// Usa datos reales de la API de Moodle
 
 import { useState, useEffect } from 'react';
 import { 
@@ -6,26 +7,30 @@ import {
   Search, 
   Clock,
   ChevronRight,
-  Filter,
   Mail,
   Bell,
   AlertCircle,
   CheckCircle2,
   User,
-  Send
+  Send,
+  GraduationCap,
+  FileText,
+  Award,
+  BookOpen
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+// Avatar imports not used in this component
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/context/AuthContext';
+import { moodleApi } from '@/services/moodleApi';
 
 interface Message {
   id: string;
-  type: 'message' | 'notification' | 'alert';
+  type: 'message' | 'notification' | 'alert' | 'grade' | 'assignment' | 'achievement';
   title: string;
   content: string;
   sender?: string;
@@ -33,94 +38,11 @@ interface Message {
   timestamp: number;
   read: boolean;
   courseName?: string;
+  link?: string;
 }
 
-// Datos simulados de mensajes
-const mockMessages: Message[] = [
-  {
-    id: '1',
-    type: 'notification',
-    title: 'Nueva calificación disponible',
-    content: 'Se ha publicado tu calificación en el curso "Atención al Cliente".',
-    sender: 'Sistema',
-    timestamp: Date.now() / 1000 - 3600,
-    read: false,
-    courseName: 'Atención al Cliente'
-  },
-  {
-    id: '2',
-    type: 'message',
-    title: 'Consulta sobre la tarea',
-    content: 'Hola, tengo una duda respecto a la entrega del módulo 3. ¿Podrías ayudarme?',
-    sender: 'María González',
-    timestamp: Date.now() / 1000 - 7200,
-    read: false,
-    courseName: 'Procesos de Producción'
-  },
-  {
-    id: '3',
-    type: 'notification',
-    title: 'Curso completado',
-    content: '¡Felicitaciones! Has completado el curso "Introducción a Heladería Duomo".',
-    sender: 'Sistema',
-    timestamp: Date.now() / 1000 - 86400,
-    read: true,
-    courseName: 'Introducción a Heladería Duomo'
-  },
-  {
-    id: '4',
-    type: 'alert',
-    title: 'Tarea próxima a vencer',
-    content: 'La tarea "Ejercicios prácticos - Módulo 2" vence en 24 horas.',
-    sender: 'Sistema',
-    timestamp: Date.now() / 1000 - 172800,
-    read: true,
-    courseName: 'Higiene y Seguridad'
-  },
-  {
-    id: '5',
-    type: 'message',
-    title: 'Reunión de equipo',
-    content: 'Hola a todos, recordemos que mañana tenemos la reunión de equipo a las 10:00.',
-    sender: 'Prof. Carlos Ruiz',
-    timestamp: Date.now() / 1000 - 259200,
-    read: true,
-    courseName: 'Liderazgo'
-  },
-  {
-    id: '6',
-    type: 'notification',
-    title: 'Nuevo material disponible',
-    content: 'Se ha agregado nuevo contenido al curso "Procesos de Producción".',
-    sender: 'Sistema',
-    timestamp: Date.now() / 1000 - 345600,
-    read: true,
-    courseName: 'Procesos de Producción'
-  },
-  {
-    id: '7',
-    type: 'message',
-    title: 'Duda sobre el examen',
-    content: '¿El examen final incluye todo el contenido del curso o solo los últimos módulos?',
-    sender: 'Juan Pérez',
-    timestamp: Date.now() / 1000 - 432000,
-    read: true,
-    courseName: 'Atención al Cliente'
-  },
-  {
-    id: '8',
-    type: 'alert',
-    title: 'Inactividad detectada',
-    content: 'No has accedido al curso "Higiene y Seguridad" en los últimos 7 días.',
-    sender: 'Sistema',
-    timestamp: Date.now() / 1000 - 604800,
-    read: true,
-    courseName: 'Higiene y Seguridad'
-  }
-];
-
 export function Messages() {
-  const { user, isTeacher } = useAuth();
+  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -134,13 +56,125 @@ export function Messages() {
   const loadMessages = async () => {
     try {
       setIsLoading(true);
-      // Simular carga de mensajes - en producción vendrían de la API
-      setTimeout(() => {
-        setMessages(mockMessages);
-        setIsLoading(false);
-      }, 500);
+      
+      const loadedMessages: Message[] = [];
+      const now = Math.floor(Date.now() / 1000);
+
+      // 1. Obtener notificaciones del sistema (tareas, calificaciones, logros)
+      try {
+        const notifications = await moodleApi.getNotifications(user?.id, 50);
+        if (Array.isArray(notifications)) {
+          notifications.forEach((notif: any) => {
+            loadedMessages.push({
+              id: `notif-${notif.id}`,
+              type: notif.type || 'notification',
+              title: notif.title || 'Notificación',
+              content: notif.message || '',
+              sender: 'Sistema',
+              timestamp: notif.timestamp || now,
+              read: notif.read || false,
+              link: notif.link,
+            });
+          });
+        }
+      } catch (error) {
+        console.warn('Error al cargar notificaciones:', error);
+      }
+
+      // 2. Obtener tareas próximas (assignments)
+      try {
+        const assignments = await moodleApi.getAssignments();
+        if (Array.isArray(assignments)) {
+          assignments.forEach((course: any) => {
+            if (Array.isArray(course.assignments)) {
+              course.assignments.forEach((assignment: any) => {
+                if (assignment.duedate && assignment.duedate > now) {
+                  const daysUntil = Math.floor((assignment.duedate - now) / 86400);
+                  if (daysUntil <= 14) { // Mostrar tareas que vencen en los próximos 14 días
+                    loadedMessages.push({
+                      id: `assignment-${assignment.id}`,
+                      type: 'assignment',
+                      title: 'Tarea próxima a vencer',
+                      content: `"${assignment.name}" vence en ${daysUntil} día${daysUntil !== 1 ? 's' : ''}`,
+                      sender: course.fullname || 'Sistema',
+                      timestamp: now,
+                      read: false,
+                      courseName: course.fullname,
+                      link: `/courses/${course.id}`,
+                    });
+                  }
+                }
+              });
+            }
+          });
+        }
+      } catch (error) {
+        console.warn('Error al cargar tareas:', error);
+      }
+
+      // 3. Obtener calificaciones recientes
+      try {
+        const grades = await moodleApi.getAllUserGrades(user?.id);
+        if (Array.isArray(grades)) {
+          grades
+            .filter((g: any) => g.dategraded && g.dategraded > now - 30 * 86400) // Últimos 30 días
+            .forEach((grade: any) => {
+              loadedMessages.push({
+                id: `grade-${grade.itemid}`,
+                type: 'grade',
+                title: 'Nueva calificación',
+                content: `Has recibido ${grade.grade?.toFixed(1) || '-'} en "${grade.itemname}"`,
+                sender: grade.coursename || 'Sistema',
+                timestamp: grade.dategraded || now,
+                read: false,
+                courseName: grade.coursename,
+                link: '/grades',
+              });
+            });
+        }
+      } catch (error) {
+        console.warn('Error al cargar calificaciones:', error);
+      }
+
+      // 4. Obtener cursos completados recientemente
+      try {
+        const courses = await moodleApi.getUserCourses(user?.id);
+        if (Array.isArray(courses)) {
+          for (const course of courses) {
+            if (course.completed) {
+              try {
+                const completion = await moodleApi.getCourseCompletionStatus(course.id, user?.id);
+                if (completion?.timecompleted && completion.timecompleted > now - 30 * 86400) {
+                  loadedMessages.push({
+                    id: `completion-${course.id}`,
+                    type: 'achievement',
+                    title: '¡Curso completado!',
+                    content: `Has completado "${course.fullname}". ¡Felicitaciones!`,
+                    sender: 'Sistema',
+                    timestamp: completion.timecompleted,
+                    read: false,
+                    courseName: course.fullname,
+                    link: '/certificates',
+                  });
+                }
+              } catch (e) {
+                // Ignorar errores de completación
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Error al cargar cursos completados:', error);
+      }
+
+      // Ordenar por fecha (más recientes primero)
+      loadedMessages.sort((a, b) => b.timestamp - a.timestamp);
+      
+      setMessages(loadedMessages);
     } catch (error) {
       console.error('Error al cargar mensajes:', error);
+      setMessages([]);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -149,7 +183,8 @@ export function Messages() {
     const now = Math.floor(Date.now() / 1000);
     const diff = now - timestamp;
     
-    if (diff < 3600) return 'Hace minutos';
+    if (diff < 60) return 'Hace un momento';
+    if (diff < 3600) return `Hace ${Math.floor(diff / 60)} min`;
     if (diff < 86400) return `Hace ${Math.floor(diff / 3600)}h`;
     if (diff < 604800) return `Hace ${Math.floor(diff / 86400)}d`;
     return new Date(timestamp * 1000).toLocaleDateString('es-ES');
@@ -163,6 +198,12 @@ export function Messages() {
         return <Bell className="w-5 h-5 text-green-500" />;
       case 'alert':
         return <AlertCircle className="w-5 h-5 text-amber-500" />;
+      case 'grade':
+        return <GraduationCap className="w-5 h-5 text-purple-500" />;
+      case 'assignment':
+        return <FileText className="w-5 h-5 text-blue-500" />;
+      case 'achievement':
+        return <Award className="w-5 h-5 text-amber-500" />;
       default:
         return <Mail className="w-5 h-5 text-gray-500" />;
     }
@@ -176,14 +217,15 @@ export function Messages() {
         return 'bg-green-50 border-green-100';
       case 'alert':
         return 'bg-amber-50 border-amber-100';
+      case 'grade':
+        return 'bg-purple-50 border-purple-100';
+      case 'assignment':
+        return 'bg-blue-50 border-blue-100';
+      case 'achievement':
+        return 'bg-amber-50 border-amber-100';
       default:
         return 'bg-gray-50 border-gray-100';
     }
-  };
-
-  const getInitials = (name: string) => {
-    if (!name) return 'U';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   // Filtrar mensajes
@@ -196,7 +238,7 @@ export function Messages() {
     const matchesTab = selectedTab === 'all' || 
       (selectedTab === 'unread' && !message.read) ||
       (selectedTab === 'messages' && message.type === 'message') ||
-      (selectedTab === 'notifications' && message.type === 'notification') ||
+      (selectedTab === 'notifications' && (message.type === 'notification' || message.type === 'grade' || message.type === 'assignment' || message.type === 'achievement')) ||
       (selectedTab === 'alerts' && message.type === 'alert');
     
     return matchesSearch && matchesTab;
@@ -208,6 +250,10 @@ export function Messages() {
     setMessages(prev => prev.map(m => 
       m.id === messageId ? { ...m, read: true } : m
     ));
+  };
+
+  const markAllAsRead = () => {
+    setMessages(prev => prev.map(m => ({ ...m, read: true })));
   };
 
   if (isLoading) {
@@ -225,6 +271,11 @@ export function Messages() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {unreadCount > 0 && (
+            <Button variant="outline" size="sm" onClick={markAllAsRead}>
+              Marcar todas como leídas
+            </Button>
+          )}
           <Badge variant="secondary" className="text-sm">
             {unreadCount} sin leer
           </Badge>
@@ -278,7 +329,7 @@ export function Messages() {
                       <p className="text-gray-500">
                         {searchQuery 
                           ? 'No se encontraron mensajes que coincidan con tu búsqueda'
-                          : 'Tu bandeja de entrada está vacía'
+                          : 'Tu bandeja de entrada está vacía. Las notificaciones aparecerán aquí cuando haya actividad en tus cursos.'
                         }
                       </p>
                     </div>
@@ -318,7 +369,7 @@ export function Messages() {
                                 </span>
                                 {message.courseName && (
                                   <span className="flex items-center gap-1">
-                                    <CheckCircle2 className="w-3 h-3" />
+                                    <BookOpen className="w-3 h-3" />
                                     {message.courseName}
                                   </span>
                                 )}
@@ -377,10 +428,13 @@ export function Messages() {
                     Curso: {selectedMessage.courseName}
                   </div>
                 )}
-                {selectedMessage.type === 'message' && (
-                  <Button className="w-full">
+                {selectedMessage.link && (
+                  <Button 
+                    className="w-full"
+                    onClick={() => window.location.href = selectedMessage.link!}
+                  >
                     <Send className="w-4 h-4 mr-2" />
-                    Responder
+                    Ver detalle
                   </Button>
                 )}
               </CardContent>
@@ -408,7 +462,7 @@ export function Messages() {
                       <span className="text-sm">Notificaciones</span>
                     </div>
                     <Badge variant="secondary">
-                      {messages.filter(m => m.type === 'notification').length}
+                      {messages.filter(m => ['notification', 'grade', 'assignment', 'achievement'].includes(m.type)).length}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg">
