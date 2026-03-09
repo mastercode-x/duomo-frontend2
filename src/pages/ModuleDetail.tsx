@@ -178,16 +178,20 @@ export function ModuleDetail() {
       {/* Breadcrumb */}
       <Breadcrumb>
         <BreadcrumbItem>
-          <BreadcrumbLink as={Link} to="/courses">
-            <Home className="w-4 h-4 mr-1" />
-            Cursos
+          <BreadcrumbLink asChild>
+            <Link to="/courses">
+              <Home className="w-4 h-4 mr-1" />
+              Cursos
+            </Link>
           </BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem>
-          <BreadcrumbLink as={Link} to={`/courses/${course.id}`}>
-            <GraduationCap className="w-4 h-4 mr-1" />
-            {course.fullname}
+          <BreadcrumbLink asChild>
+            <Link to={`/courses/${course.id}`}>
+              <GraduationCap className="w-4 h-4 mr-1" />
+              {course.fullname}
+            </Link>
           </BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbSeparator />

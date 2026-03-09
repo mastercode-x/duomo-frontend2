@@ -14,7 +14,7 @@ import {
   ChevronRight,
   ChevronFirst,
   ChevronLast,
-  User
+  User as UserIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -101,7 +101,7 @@ export function Statistics() {
 
       // Calcular actividad de cada estudiante
       const studentsWithActivity: StudentActivity[] = allStudentsData.map(student => {
-        const sucursalField = student.customfields?.find(f => f.shortname === 'sucursales');
+        const sucursalField = student.customfields?.find((f: { shortname: string; value: string }) => f.shortname === 'sucursales');
         const coursesCount = student.enrolledCourses?.length || 0;
         const progress = student.enrolledCourses?.reduce((sum, c) => sum + (c.progress || 0), 0) / (coursesCount || 1);
         const lastActivity = student.lastaccess || student.lastcourseaccess || 0;

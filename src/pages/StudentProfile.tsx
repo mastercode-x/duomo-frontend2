@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
-  User, 
+  User as UserIcon, 
   Mail, 
   BookOpen, 
   Clock,
@@ -114,13 +114,13 @@ export function StudentProfile() {
 
   const getSucursal = (user: User | null): string => {
     if (!user?.customfields) return 'No asignada';
-    const sucursalField = user.customfields.find(f => f.shortname === 'sucursales');
+    const sucursalField = user.customfields.find((f: { shortname: string; value?: string }) => f.shortname === 'sucursales');
     return sucursalField?.value || 'No asignada';
   };
 
   const getProvincia = (user: User | null): string => {
     if (!user?.customfields) return '-';
-    const provinciaField = user.customfields.find(f => f.shortname === 'PROVINCIA');
+    const provinciaField = user.customfields.find((f: { shortname: string; value?: string }) => f.shortname === 'PROVINCIA');
     return provinciaField?.value || '-';
   };
 
@@ -138,7 +138,7 @@ export function StudentProfile() {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-          <User className="w-10 h-10 text-gray-400" />
+          <UserIcon className="w-10 h-10 text-gray-400" />
         </div>
         <h2 className="text-xl font-bold text-gray-900 mb-2">Acceso Restringido</h2>
         <p className="text-gray-600 text-center max-w-md">

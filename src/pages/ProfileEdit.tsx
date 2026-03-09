@@ -243,7 +243,7 @@ export function ProfileEdit() {
         { shortname: 'CUIL_CUIT', value: formData.cuil_cuit },
         { shortname: 'NIV_EST', value: formData.niv_est },
         { shortname: 'sucursales', value: formData.sucursales.join(',') },
-      ];
+      ] as any[];
       
       // Llamar a la API para actualizar el usuario
       await moodleApi.updateUser({
