@@ -162,7 +162,13 @@ export function MainLayout({ children }: MainLayoutProps) {
       <div className="px-4 py-4 border-b border-gray-100">
         <div className="flex items-center gap-3">
           <Avatar className="h-12 w-12 flex-shrink-0 border-2 border-white shadow-md">
-            <AvatarImage src={user?.profileimageurl} alt={user?.fullname} />
+            <AvatarImage 
+              src={user?.profileimageurl} 
+              alt={user?.fullname} 
+              onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
             <AvatarFallback className="bg-gradient-to-br from-[#8B9A7D] to-[#6B7A5D] text-white font-medium">
               {getInitials(user?.fullname || '')}
             </AvatarFallback>
@@ -305,10 +311,16 @@ export function MainLayout({ children }: MainLayoutProps) {
               {/* User Menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center gap-2 hover:bg-gray-100">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={user?.profileimageurl} alt={user?.fullname} />
-                      <AvatarFallback className="bg-gradient-to-br from-[#8B9A7D] to-[#6B7A5D] text-white text-xs">
+                  <Button variant="ghost" className="flex items-center gap-2 px-2 hover:bg-gray-100 rounded-full transition-all">
+                    <Avatar className="h-8 w-8 border border-gray-200">
+                      <AvatarImage 
+                        src={user?.profileimageurl} 
+                        alt={user?.fullname} 
+                        onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                      <AvatarFallback className="bg-[#8B9A7D] text-white text-xs">
                         {getInitials(user?.fullname || '')}
                       </AvatarFallback>
                     </Avatar>
@@ -327,18 +339,22 @@ export function MainLayout({ children }: MainLayoutProps) {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate('/profile')}>
-                    <User className="mr-2 h-4 w-4" />
-                    Mi Perfil
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile" className="cursor-pointer">
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Mi Perfil</span>
+                    </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/settings')}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Configuración
+                  <DropdownMenuItem asChild>
+                    <Link to="/settings" className="cursor-pointer">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Configuración</span>
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                  <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer">
                     <LogOut className="mr-2 h-4 w-4" />
-                    Cerrar Sesión
+                    <span>Cerrar Sesión</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -347,12 +363,10 @@ export function MainLayout({ children }: MainLayoutProps) {
         </header>
 
         {/* Page Content */}
-        <main className="p-4 lg:p-6">
+        <main className="p-4 lg:p-8 max-w-7xl mx-auto">
           {children}
         </main>
       </div>
     </div>
   );
 }
-
-export default MainLayout;
