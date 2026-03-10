@@ -304,7 +304,13 @@ export function Students() {
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
                             <Avatar className="h-10 w-10">
-                              <AvatarImage src={student.profileimageurl} alt={student.fullname} />
+                              <AvatarImage 
+                                src={student.profileimageurl} 
+                                alt={student.fullname} 
+                                onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
                               <AvatarFallback className="bg-gradient-to-br from-[#8B9A7D] to-[#6B7A5D] text-white text-sm">
                                 {getInitials(student.fullname)}
                               </AvatarFallback>

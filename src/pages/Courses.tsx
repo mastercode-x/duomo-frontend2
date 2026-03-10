@@ -17,6 +17,7 @@ import {
   Filter
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useMoodleImageUrl } from '@/hooks/useMoodleImageUrl';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -308,6 +309,8 @@ interface CourseCardProps {
 }
 
 function CourseCard({ course, getStatusBadge, isTeacher }: CourseCardProps) {
+  const courseImageUrl = useMoodleImageUrl(course.courseimage);
+
   const getCourseColor = (name: string) => {
     const colors = ['#8B9A7D', '#E8927C', '#6B8F71', '#D4845A', '#5C7A6B'];
     const index = name.charCodeAt(0) % colors.length;
@@ -327,9 +330,9 @@ function CourseCard({ course, getStatusBadge, isTeacher }: CourseCardProps) {
         className="relative h-40 overflow-hidden"
         style={{ backgroundColor: getCourseColor(course.fullname) }}
       >
-        {course.courseimage && (
+        {courseImageUrl && (
           <img 
-            src={course.courseimage} 
+            src={courseImageUrl} 
             alt={course.fullname}
             className="w-full h-full object-cover"
             onError={handleImageError}
@@ -337,7 +340,7 @@ function CourseCard({ course, getStatusBadge, isTeacher }: CourseCardProps) {
         )}
         <div 
           className="w-full h-full items-center justify-center"
-          style={{ display: course.courseimage ? 'none' : 'flex' }}
+          style={{ display: courseImageUrl ? 'none' : 'flex' }}
         >
           <GraduationCap className="w-16 h-16 text-white/50" />
         </div>
@@ -401,6 +404,8 @@ function CourseCard({ course, getStatusBadge, isTeacher }: CourseCardProps) {
 interface CourseListItemProps extends CourseCardProps {}
 
 function CourseListItem({ course, getStatusBadge, isTeacher }: CourseListItemProps) {
+  const courseImageUrl = useMoodleImageUrl(course.courseimage);
+
   const getCourseColor = (name: string) => {
     const colors = ['#8B9A7D', '#E8927C', '#6B8F71', '#D4845A', '#5C7A6B'];
     const index = name.charCodeAt(0) % colors.length;
@@ -421,9 +426,9 @@ function CourseListItem({ course, getStatusBadge, isTeacher }: CourseListItemPro
           className="w-full md:w-48 h-32 md:h-auto flex-shrink-0 overflow-hidden"
           style={{ backgroundColor: getCourseColor(course.fullname) }}
         >
-          {course.courseimage && (
+          {courseImageUrl && (
             <img 
-              src={course.courseimage} 
+              src={courseImageUrl} 
               alt={course.fullname}
               className="w-full h-full object-cover"
               onError={handleImageError}
@@ -431,7 +436,7 @@ function CourseListItem({ course, getStatusBadge, isTeacher }: CourseListItemPro
           )}
           <div 
             className="w-full h-full items-center justify-center min-h-[120px]"
-            style={{ display: course.courseimage ? 'none' : 'flex' }}
+            style={{ display: courseImageUrl ? 'none' : 'flex' }}
           >
             <GraduationCap className="w-12 h-12 text-white/50" />
           </div>

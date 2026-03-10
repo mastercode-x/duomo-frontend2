@@ -16,6 +16,7 @@ import {
   GraduationCap
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useMoodleImageUrl } from '@/hooks/useMoodleImageUrl';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -369,6 +370,8 @@ interface CourseProgressItemProps {
 }
 
 function CourseProgressItem({ course, isTeacher }: CourseProgressItemProps) {
+  const courseImageUrl = useMoodleImageUrl(course.courseimage);
+
   const getInitials = (name: string) => {
     if (!name) return 'U';
     return name
@@ -397,9 +400,9 @@ function CourseProgressItem({ course, isTeacher }: CourseProgressItemProps) {
         className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0"
         style={{ backgroundColor: getCourseColor(course.fullname) }}
       >
-        {course.courseimage && (
+        {courseImageUrl && (
           <img 
-            src={course.courseimage} 
+            src={courseImageUrl} 
             alt={course.fullname}
             className="w-full h-full object-cover"
             onError={handleImageError}
@@ -407,7 +410,7 @@ function CourseProgressItem({ course, isTeacher }: CourseProgressItemProps) {
         )}
         <div 
           className="w-full h-full items-center justify-center text-white text-xs font-bold"
-          style={{ display: course.courseimage ? 'none' : 'flex' }}
+          style={{ display: courseImageUrl ? 'none' : 'flex' }}
         >
           {getInitials(course.fullname)}
         </div>

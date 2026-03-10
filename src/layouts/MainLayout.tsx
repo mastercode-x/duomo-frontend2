@@ -23,6 +23,7 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useMoodleImageUrl } from '@/hooks/useMoodleImageUrl';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -82,6 +83,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
+  const profileImageUrl = useMoodleImageUrl(user?.profileimageurl);
 
   // Cargar contador de notificaciones
   useEffect(() => {
@@ -163,7 +165,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         <div className="flex items-center gap-3">
           <Avatar className="h-12 w-12 flex-shrink-0 border-2 border-white shadow-md">
             <AvatarImage 
-              src={user?.profileimageurl} 
+              src={profileImageUrl} 
               alt={user?.fullname} 
               onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
                 e.currentTarget.style.display = 'none';
@@ -314,7 +316,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                   <Button variant="ghost" className="flex items-center gap-2 px-2 hover:bg-gray-100 rounded-full transition-all">
                     <Avatar className="h-8 w-8 border border-gray-200">
                       <AvatarImage 
-                        src={user?.profileimageurl} 
+                        src={profileImageUrl} 
                         alt={user?.fullname} 
                         onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
                           e.currentTarget.style.display = 'none';

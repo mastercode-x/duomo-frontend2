@@ -28,7 +28,9 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/context/AuthContext';
+import { useMoodleImageUrl } from '@/hooks/useMoodleImageUrl';
 import { moodleApi } from '@/services/moodleApi';
+import { getSucursalNames } from '@/lib/sucursales';
 import type { User, Course, Grade } from '@/types';
 
 interface StudentData {
@@ -47,6 +49,7 @@ export function StudentProfile() {
   const { studentId } = useParams<{ studentId: string }>();
   const { isTeacher } = useAuth();
   const navigate = useNavigate();
+  const [expandedSucursales, setExpandedSucursales] = useState(false);
   
   const [data, setData] = useState<StudentData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -188,23 +191,10 @@ export function StudentProfile() {
         <Card>
           <CardContent className="p-6">
             <div className="flex flex-col items-center text-center">
-              <Avatar className="w-24 h-24 mb-4">
-                <AvatarImage 
-                  src={user.profileimageurl} 
-                  alt={user.fullname} 
-                  onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-                <AvatarFallback className="bg-gradient-to-br from-[#8B9A7D] to-[#6B7A5D] text-white text-2xl">
-                  {getInitials(user.fullname)}
-                </AvatarFallback>
-              </Avatar>
+              <StudentProfileAvatar user={user} />
               <h2 className="text-xl font-bold text-gray-900">{user.fullname}</h2>
               <p className="text-gray-500">{user.email}</p>
-              <Badge className="mt-2" variant="secondary">
-                {getSucursal(user)}
-              </Badge>
+              <StudentSucursalesDisplay user={user} expanded={expandedSucursales} onToggle={() => setExpandedSucursales(!expandedSucursales)} />
               
               <div className="w-full mt-6 space-y-3">
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -422,6 +412,66 @@ export function StudentProfile() {
           </Card>
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+// Componente para mostrar avatar del estudiante con imagen de Moodle
+function StudentProfileAvatar({ user }: { user: User }) {
+  const profileImageUrl = useMoodleImageUrl(user.profileimageurl);
+  const getInitials = (name: string) => {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+  
+  return (
+    <Avatar className="w-24 h-24 mb-4">
+      <AvatarImage 
+        src={profileImageUrl} 
+        alt={user.fullname} 
+        onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+          e.currentTarget.style.display = 'none';
+        }}
+      />
+      <AvatarFallback className="bg-gradient-to-br from-[#8B9A7D] to-[#6B7A5D] text-white text-2xl">
+        {getInitials(user.fullname)}
+      </AvatarFallback>
+    </Avatar>
+  );
+}
+
+// Componente para mostrar sucursales con nombres y funcionalidad expandible
+function StudentSucursalesDisplay({ user, expanded, onToggle }: { user: User; expanded: boolean; onToggle: () => void }) {
+  const sucursalField = user.customfields?.find((f: { shortname: string; value?: string }) => f.shortname === 'sucursales');
+  const sucursalIndices = sucursalField?.value || '';
+  const sucursales = getSucursalNames(sucursalIndices);
+  const showToggle = sucursales.length > 5;
+  const visibleSucursales = expanded ? sucursales : sucursales.slice(0, 5);
+  const hiddenCount = sucursales.length - 5;
+
+  if (!sucursalIndices || sucursales.length === 0) {
+    return (
+      <Badge className="mt-2" variant="secondary">
+        No asignada
+      </Badge>
+    );
+  }
+
+  return (
+    <div className="mt-2 flex flex-col items-center gap-1">
+      {visibleSucursales.map((name, idx) => (
+        <Badge key={idx} variant="secondary" className="text-xs">
+          {name}
+        </Badge>
+      ))}
+      {showToggle && (
+        <button
+          onClick={onToggle}
+          className="text-xs text-blue-600 hover:text-blue-800 font-semibold mt-1 transition-colors"
+        >
+          {expanded ? '▲ Mostrar menos' : `▼ +${hiddenCount} más`}
+        </button>
+      )}
     </div>
   );
 }
