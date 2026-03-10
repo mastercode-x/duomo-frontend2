@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import logoSrc from '@/assets/logo-campus-duomo.jpg';
+import { DuomoLogo } from '@/components/DuomoLogo';
 
 export function Login() {
   const { login, error, clearError, isLoading } = useAuth();
@@ -68,13 +68,9 @@ export function Login() {
       {/* Columna Izquierda - Formulario */}
       <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 sm:px-12 lg:px-20 xl:px-28 bg-white">
         <div className="max-w-md w-full mx-auto">
-          {/* Logo */}
-          <div className="mb-10">
-            <img
-              src={logoSrc}
-              alt="Campus Duomo"
-              className="h-16 w-auto object-contain"
-            />
+          {/* Logo - Centrado */}
+          <div className="mb-10 flex justify-center">
+            <DuomoLogo className="h-16 w-auto object-contain" />
           </div>
 
           {/* Título */}
