@@ -153,11 +153,13 @@ export function MainLayout({ children }: MainLayoutProps) {
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="flex items-center justify-center px-4 py-4 border-b border-gray-100">
-        {isSidebarOpen ? (
-          <DuomoLogo className="h-10 w-auto object-contain" />
-        ) : (
-          <DuomoLogo className="h-8 w-8 object-contain" />
-        )}
+        <DuomoLogo 
+          isCollapsed={!isSidebarOpen} 
+          className={cn(
+            "object-contain transition-all duration-300",
+            isSidebarOpen ? "h-10 w-auto" : "h-8 w-8"
+          )} 
+        />
       </div>
 
       {/* User Info - Avatar y nombre */}

@@ -2,13 +2,15 @@
 // Usa la imagen real del logo oficial de Campus Duomo
 
 import logoSrc from '@/assets/logo-campus-duomo.jpg';
+import logoMinimizedSrc from '@/assets/logo-minimized.png';
 
 interface DuomoLogoProps {
   className?: string;
   variant?: 'dark' | 'light';
+  isCollapsed?: boolean;
 }
 
-export function DuomoLogo({ className = '', variant = 'dark' }: DuomoLogoProps) {
+export function DuomoLogo({ className = '', variant = 'dark', isCollapsed = false }: DuomoLogoProps) {
   // En variante 'light' (fondos oscuros), aplicamos un filtro para invertir colores
   const style = variant === 'light'
     ? { filter: 'brightness(0) invert(1)' }
@@ -16,7 +18,7 @@ export function DuomoLogo({ className = '', variant = 'dark' }: DuomoLogoProps) 
 
   return (
     <img
-      src={logoSrc}
+      src={isCollapsed ? logoMinimizedSrc : logoSrc}
       alt="Campus Duomo"
       className={className}
       style={style}
@@ -33,7 +35,7 @@ export function DuomoIcon({ className = '', variant = 'dark' }: DuomoLogoProps) 
 
   return (
     <img
-      src={logoSrc}
+      src={logoMinimizedSrc}
       alt="Campus Duomo"
       className={className}
       style={style}
