@@ -23,7 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -189,6 +189,13 @@ export function StudentProfile() {
           <CardContent className="p-6">
             <div className="flex flex-col items-center text-center">
               <Avatar className="w-24 h-24 mb-4">
+                <AvatarImage 
+                  src={user.profileimageurl} 
+                  alt={user.fullname} 
+                  onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
                 <AvatarFallback className="bg-gradient-to-br from-[#8B9A7D] to-[#6B7A5D] text-white text-2xl">
                   {getInitials(user.fullname)}
                 </AvatarFallback>

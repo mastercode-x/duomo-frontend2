@@ -151,19 +151,35 @@ export function CourseDetail() {
       {/* Course Header */}
       <div className="relative">
         {/* Banner */}
-        <div className="h-48 md:h-64 rounded-xl overflow-hidden bg-gradient-to-br from-amber-400 via-orange-500 to-red-500">
-          {course.courseimage ? (
+        <div 
+          className="h-48 md:h-64 rounded-xl overflow-hidden relative"
+          style={{ 
+            backgroundColor: (() => {
+              const colors = ['#8B9A7D', '#E8927C', '#6B8F71', '#D4845A', '#5C7A6B'];
+              const index = course.fullname.charCodeAt(0) % colors.length;
+              return colors[index];
+            })()
+          }}
+        >
+          {course.courseimage && (
             <img 
               src={course.courseimage} 
               alt={course.fullname}
               className="w-full h-full object-cover opacity-80"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                if (fallback) fallback.style.display = 'flex';
+              }}
             />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <BookOpen className="w-24 h-24 text-white/30" />
-            </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+          <div 
+            className="w-full h-full items-center justify-center"
+            style={{ display: course.courseimage ? 'none' : 'flex' }}
+          >
+            <BookOpen className="w-24 h-24 text-white/30" />
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
         </div>
 
         {/* Course Info Overlay */}

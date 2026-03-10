@@ -1476,20 +1476,26 @@ class MoodleApiClient {
    */
   private addTokenToPluginfileUrl(url: string, token: string): string {
     if (!url || !token) return url || '';
-    // Reemplazar /pluginfile.php por /webservice/pluginfile.php si es necesario
-    let result = url.replace(
-      /\/pluginfile\.php(?!\/)/,
-      '/pluginfile.php'
-    );
-    // Si la URL tiene /pluginfile.php pero NO /webservice/pluginfile.php, convertirla
-    if (result.includes('/pluginfile.php') && !result.includes('/webservice/pluginfile.php')) {
-      result = result.replace('/pluginfile.php', '/webservice/pluginfile.php');
+    
+    let result = url;
+    
+    // Si la URL contiene /pluginfile.php, transformarla al endpoint de webservice
+    if (result.includes('/pluginfile.php')) {
+      // Caso A: Ya es una URL de webservice pero le falta el token
+      if (result.includes('/webservice/pluginfile.php')) {
+        if (!result.includes('token=')) {
+          const separator = result.includes('?') ? '&' : '?';
+          result = `${result}${separator}token=${encodeURIComponent(token)}`;
+        }
+      } 
+      // Caso B: Es una URL normal de pluginfile, convertirla a webservice y agregar token
+      else {
+        result = result.replace('/pluginfile.php/', '/webservice/pluginfile.php/');
+        const separator = result.includes('?') ? '&' : '?';
+        result = `${result}${separator}token=${encodeURIComponent(token)}`;
+      }
     }
-    // Agregar token si no lo tiene ya
-    if (!result.includes('token=')) {
-      const separator = result.includes('?') ? '&' : '?';
-      result = `${result}${separator}token=${encodeURIComponent(token)}`;
-    }
+    
     return result;
   }
 

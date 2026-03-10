@@ -49,12 +49,6 @@ const progressData = [
   { name: 'Jun', progress: 90 },
 ];
 
-const courseCompletionData = [
-  { name: 'Completados', value: 12, color: '#f59e0b' },
-  { name: 'En Progreso', value: 8, color: '#3b82f6' },
-  { name: 'Pendientes', value: 5, color: '#e5e7eb' },
-];
-
 export function Dashboard() {
   const { user, isTeacher } = useAuth();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
@@ -300,106 +294,23 @@ export function Dashboard() {
               </Button>
               {isTeacher && (
                 <Button variant="outline" className="w-full justify-start" asChild>
-                  <Link to="/statistics">
-                    <BarChart3 className="w-4 h-4 mr-2" />
-                    Ver Estadísticas
+                  <Link to="/students">
+                    <Users className="w-4 h-4 mr-2" />
+                    Mis Estudiantes
                   </Link>
                 </Button>
               )}
               <Button variant="outline" className="w-full justify-start" asChild>
-                <Link to="/certificates">
-                  <Award className="w-4 h-4 mr-2" />
-                  Mis Certificados
-                </Link>
-              </Button>
-              <Button variant="outline" className="w-full justify-start" asChild>
                 <Link to="/profile">
-                  <GraduationCap className="w-4 h-4 mr-2" />
-                  Editar Perfil
+                  <Avatar className="w-4 h-4 mr-2">
+                    <AvatarImage src={user?.profileimageurl} />
+                    <AvatarFallback>{user?.firstname?.[0]}</AvatarFallback>
+                  </Avatar>
+                  Mi Perfil
                 </Link>
               </Button>
             </CardContent>
           </Card>
-
-          {/* Upcoming Events */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Próximos Eventos</CardTitle>
-              <CardDescription>Tu calendario de actividades</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {dashboardData?.upcomingEvents?.slice(0, 3).map((event, index) => (
-                  <div key={event.id || index} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                    <div className="w-10 h-10 bg-[#8B9A7F]/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Calendar className="w-5 h-5 text-[#8B9A7F]" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 truncate">{event.name}</p>
-                      <p className="text-sm text-gray-500">
-                        {event.timestart 
-                          ? new Date(event.timestart * 1000).toLocaleDateString('es-ES', {
-                              day: 'numeric',
-                              month: 'short',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })
-                          : 'Fecha por definir'
-                        }
-                      </p>
-                    </div>
-                  </div>
-                ))}
-                {(!dashboardData?.upcomingEvents || dashboardData.upcomingEvents.length === 0) && (
-                  <div className="text-center py-6 text-gray-500">
-                    <Calendar className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No hay eventos próximos</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Course Distribution (Students only) */}
-          {!isTeacher && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Distribución de Cursos</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={courseCompletionData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={40}
-                        outerRadius={70}
-                        dataKey="value"
-                      >
-                        {courseCompletionData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="flex justify-center gap-4 mt-2">
-                  {courseCompletionData.map((item) => (
-                    <div key={item.name} className="flex items-center gap-1">
-                      <div 
-                        className="w-3 h-3 rounded-full" 
-                        style={{ backgroundColor: item.color }}
-                      />
-                      <span className="text-xs text-gray-600">{item.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
     </div>
@@ -459,6 +370,7 @@ interface CourseProgressItemProps {
 
 function CourseProgressItem({ course, isTeacher }: CourseProgressItemProps) {
   const getInitials = (name: string) => {
+    if (!name) return 'U';
     return name
       .split(' ')
       .map(n => n[0])
@@ -467,14 +379,39 @@ function CourseProgressItem({ course, isTeacher }: CourseProgressItemProps) {
       .slice(0, 2);
   };
 
+  const getCourseColor = (name: string) => {
+    const colors = ['#8B9A7D', '#E8927C', '#6B8F71', '#D4845A', '#5C7A6B'];
+    const index = name.charCodeAt(0) % colors.length;
+    return colors[index];
+  };
+
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    e.currentTarget.style.display = 'none';
+    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+    if (fallback) fallback.style.display = 'flex';
+  };
+
   return (
     <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-      <Avatar className="w-12 h-12">
-        <AvatarImage src={course.courseimage} alt={course.fullname} />
-        <AvatarFallback className="bg-gradient-to-br from-[#8B9A7F] to-[#7A896F] text-white">
+      <div 
+        className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0"
+        style={{ backgroundColor: getCourseColor(course.fullname) }}
+      >
+        {course.courseimage && (
+          <img 
+            src={course.courseimage} 
+            alt={course.fullname}
+            className="w-full h-full object-cover"
+            onError={handleImageError}
+          />
+        )}
+        <div 
+          className="w-full h-full items-center justify-center text-white text-xs font-bold"
+          style={{ display: course.courseimage ? 'none' : 'flex' }}
+        >
           {getInitials(course.fullname)}
-        </AvatarFallback>
-      </Avatar>
+        </div>
+      </div>
       <div className="flex-1 min-w-0">
         <h4 className="font-medium text-gray-900 truncate">{course.fullname}</h4>
         <p className="text-sm text-gray-500">
@@ -500,51 +437,26 @@ function CourseProgressItem({ course, isTeacher }: CourseProgressItemProps) {
 function DashboardSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-4 w-96" />
+      <div className="flex justify-between items-center">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+        <Skeleton className="h-10 w-32" />
       </div>
-      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[1, 2, 3, 4].map((i) => (
-          <Card key={i}>
-            <CardContent className="p-6">
-              <Skeleton className="h-12 w-12 rounded-xl mb-4" />
-              <Skeleton className="h-8 w-20 mb-2" />
-              <Skeleton className="h-4 w-32" />
-            </CardContent>
-          </Card>
+          <Skeleton key={i} className="h-32 w-full" />
         ))}
       </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <Skeleton className="h-6 w-40" />
-            </CardHeader>
-            <CardContent>
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-20 w-full mb-4" />
-              ))}
-            </CardContent>
-          </Card>
+        <div className="lg:col-span-2">
+          <Skeleton className="h-96 w-full" />
         </div>
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <Skeleton className="h-6 w-32" />
-            </CardHeader>
-            <CardContent>
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-16 w-full mb-3" />
-              ))}
-            </CardContent>
-          </Card>
+        <div>
+          <Skeleton className="h-96 w-full" />
         </div>
       </div>
     </div>
   );
 }
-
-export default Dashboard;

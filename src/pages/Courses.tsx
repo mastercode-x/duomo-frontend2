@@ -308,21 +308,39 @@ interface CourseCardProps {
 }
 
 function CourseCard({ course, getStatusBadge, isTeacher }: CourseCardProps) {
+  const getCourseColor = (name: string) => {
+    const colors = ['#8B9A7D', '#E8927C', '#6B8F71', '#D4845A', '#5C7A6B'];
+    const index = name.charCodeAt(0) % colors.length;
+    return colors[index];
+  };
+
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    e.currentTarget.style.display = 'none';
+    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+    if (fallback) fallback.style.display = 'flex';
+  };
+
   return (
     <Card className="group hover:shadow-lg transition-shadow overflow-hidden">
       {/* Course Image */}
-      <div className="relative h-40 bg-gradient-to-br from-amber-400 to-orange-500">
-        {course.courseimage ? (
+      <div 
+        className="relative h-40 overflow-hidden"
+        style={{ backgroundColor: getCourseColor(course.fullname) }}
+      >
+        {course.courseimage && (
           <img 
             src={course.courseimage} 
             alt={course.fullname}
             className="w-full h-full object-cover"
+            onError={handleImageError}
           />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <GraduationCap className="w-16 h-16 text-white/50" />
-          </div>
         )}
+        <div 
+          className="w-full h-full items-center justify-center"
+          style={{ display: course.courseimage ? 'none' : 'flex' }}
+        >
+          <GraduationCap className="w-16 h-16 text-white/50" />
+        </div>
         <div className="absolute top-3 right-3">
           {getStatusBadge(course)}
         </div>
@@ -383,22 +401,40 @@ function CourseCard({ course, getStatusBadge, isTeacher }: CourseCardProps) {
 interface CourseListItemProps extends CourseCardProps {}
 
 function CourseListItem({ course, getStatusBadge, isTeacher }: CourseListItemProps) {
+  const getCourseColor = (name: string) => {
+    const colors = ['#8B9A7D', '#E8927C', '#6B8F71', '#D4845A', '#5C7A6B'];
+    const index = name.charCodeAt(0) % colors.length;
+    return colors[index];
+  };
+
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    e.currentTarget.style.display = 'none';
+    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+    if (fallback) fallback.style.display = 'flex';
+  };
+
   return (
     <Card className="hover:shadow-md transition-shadow">
       <div className="flex flex-col md:flex-row">
         {/* Image */}
-        <div className="w-full md:w-48 h-32 md:h-auto bg-gradient-to-br from-amber-400 to-orange-500 flex-shrink-0">
-          {course.courseimage ? (
+        <div 
+          className="w-full md:w-48 h-32 md:h-auto flex-shrink-0 overflow-hidden"
+          style={{ backgroundColor: getCourseColor(course.fullname) }}
+        >
+          {course.courseimage && (
             <img 
               src={course.courseimage} 
               alt={course.fullname}
               className="w-full h-full object-cover"
+              onError={handleImageError}
             />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <GraduationCap className="w-12 h-12 text-white/50" />
-            </div>
           )}
+          <div 
+            className="w-full h-full items-center justify-center min-h-[120px]"
+            style={{ display: course.courseimage ? 'none' : 'flex' }}
+          >
+            <GraduationCap className="w-12 h-12 text-white/50" />
+          </div>
         </div>
 
         {/* Content */}
