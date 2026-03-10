@@ -2,12 +2,13 @@
 // Layout de dos columnas: formulario minimalista + panel visual
 
 import { useState } from 'react';
-import { Eye, EyeOff, Lock, User, AlertCircle, Loader2, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, Lock, User, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import logoSrc from '@/assets/logo-campus-duomo.jpg';
 
 export function Login() {
   const { login, error, clearError, isLoading } = useAuth();
@@ -69,12 +70,11 @@ export function Login() {
         <div className="max-w-md w-full mx-auto">
           {/* Logo */}
           <div className="mb-10">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#8B9A7D] to-[#6B7A5D] flex items-center justify-center shadow-lg">
-                <Sparkles className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-2xl font-bold text-gray-900">Campus Duomo</span>
-            </div>
+            <img
+              src={logoSrc}
+              alt="Campus Duomo"
+              className="h-16 w-auto object-contain"
+            />
           </div>
 
           {/* Título */}
@@ -213,68 +213,13 @@ export function Login() {
 
       {/* Columna Derecha - Panel Visual */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
-        {/* Fondo con gradiente */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#8B9A7D] via-[#A5B49A] to-[#E8927C]" />
-        
-        {/* Patrón geométrico sutil */}
-        <div className="absolute inset-0 opacity-10">
-          <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
-                <circle cx="30" cy="30" r="1.5" fill="white" />
-                <path d="M30 0 L30 60 M0 30 L60 30" stroke="white" strokeWidth="0.5" fill="none" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" />
-          </svg>
-        </div>
-
-        {/* Círculos decorativos */}
-        <div className="absolute top-20 right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 left-20 w-48 h-48 bg-[#E8927C]/30 rounded-full blur-2xl" />
-        <div className="absolute top-1/2 left-1/3 w-32 h-32 bg-white/5 rounded-full blur-xl" />
-
-        {/* Contenido */}
-        <div className="relative z-10 flex flex-col justify-center items-center text-white px-16">
-          <div className="text-center max-w-md">
-            {/* Icono decorativo */}
-            <div className="mb-8 flex justify-center">
-              <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-                <Sparkles className="w-10 h-10 text-white" />
-              </div>
-            </div>
-
-            {/* Frase motivacional */}
-            <h2 className="text-4xl font-bold mb-6 leading-tight">
-              Aprende.<br />
-              Crece.<br />
-              <span className="text-white/90">Lidera.</span>
-            </h2>
-
-            <p className="text-lg text-white/80 leading-relaxed">
-              Formación continua para el equipo Duomo. 
-              Desarrolla tus habilidades y alcanza tu máximo potencial.
-            </p>
-
-            {/* Stats decorativos */}
-            <div className="mt-12 flex justify-center gap-8">
-              <div className="text-center">
-                <p className="text-3xl font-bold">50+</p>
-                <p className="text-sm text-white/70">Cursos</p>
-              </div>
-              <div className="w-px bg-white/30" />
-              <div className="text-center">
-                <p className="text-3xl font-bold">1K+</p>
-                <p className="text-sm text-white/70">Estudiantes</p>
-              </div>
-              <div className="w-px bg-white/30" />
-              <div className="text-center">
-                <p className="text-3xl font-bold">98%</p>
-                <p className="text-sm text-white/70">Satisfacción</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Fondo con imagen */}
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: 'url(https://campus.duomo.com.ar/pluginfile.php/1/theme_academi/loginbg/1742997622/portada_login_2.png)'
+          }}
+        />
       </div>
     </div>
   );
