@@ -47,17 +47,17 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
 
         {/* Footer */}
         <div className="p-6 text-center text-sm text-gray-500">
-          © 2024 Heladería Duomo. Todos los derechos reservados.
+          © {new Date().getFullYear()} Heladería Duomo. Todos los derechos reservados.
         </div>
       </div>
 
       {/* Right Side - Image */}
       <div className="hidden lg:flex lg:flex-1 relative overflow-hidden">
-        {/* Background Image - Helado */}
+        {/* Background Image - Helado Artesanal */}
         <div 
           className="absolute inset-0 bg-cover bg-center"
           style={{
-            backgroundImage: `url('https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=1920&q=80')`,
+            backgroundImage: `url('/login-background.jpg')`,
           }}
         />
         {/* Overlay */}
