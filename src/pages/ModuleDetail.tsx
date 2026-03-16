@@ -91,12 +91,10 @@ function getModuleLabel(modname: string) {
 
 /**
  * Extrae la URL de embed de un video de YouTube o Vimeo.
- * Si no reconoce el formato, devuelve null.
  */
 function getVideoEmbedUrl(url: string): string | null {
   if (!url) return null;
 
-  // YouTube: watch?v=ID  |  youtu.be/ID  |  embed/ID
   const ytMatch = url.match(
     /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
   );
@@ -104,7 +102,6 @@ function getVideoEmbedUrl(url: string): string | null {
     return `https://www.youtube.com/embed/${ytMatch[1]}?rel=0&modestbranding=1`;
   }
 
-  // Vimeo: vimeo.com/ID  |  player.vimeo.com/video/ID
   const vimeoMatch = url.match(/(?:vimeo\.com\/(?:video\/)?|player\.vimeo\.com\/video\/)(\d+)/);
   if (vimeoMatch) {
     return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
@@ -113,9 +110,6 @@ function getVideoEmbedUrl(url: string): string | null {
   return null;
 }
 
-/**
- * Determina si una URL es un archivo de video (mp4, webm, ogg).
- */
 function isDirectVideoUrl(url: string): boolean {
   return /\.(mp4|webm|ogg)(\?.*)?$/i.test(url);
 }
@@ -126,12 +120,9 @@ function isDirectVideoUrl(url: string): boolean {
 
 /** supervideo / video: YouTube, Vimeo o archivo mp4 */
 function VideoPlayer({ module }: { module: CourseModule }) {
-  // La URL del módulo puede ser la URL de Moodle (que redirige al video).
-  // También puede haber contenido en module.contents[0].fileurl para mp4.
   const rawUrl = module.url ?? '';
   const embedUrl = getVideoEmbedUrl(rawUrl);
 
-  // Intentar obtener URL directa de mp4 desde contents
   const mp4Content = module.contents?.find(
     (c) => c.type === 'file' && c.mimetype?.startsWith('video/')
   );
@@ -180,23 +171,19 @@ function VideoPlayer({ module }: { module: CourseModule }) {
     );
   }
 
-  // Fallback mejorado: diseño atractivo de "ver en plataforma"
   return (
     <div className="relative rounded-xl overflow-hidden bg-gradient-to-br from-gray-900 to-gray-700 aspect-video flex flex-col items-center justify-center gap-4 p-8">
-      {/* Botón play grande */}
       <div className="w-20 h-20 bg-white/20 backdrop-blur rounded-full flex items-center justify-center">
         <PlayCircle className="w-10 h-10 text-white" />
       </div>
-      
       <div className="text-center text-white">
         <p className="font-semibold text-lg">{module.name}</p>
         <p className="text-sm text-white/70 mt-1">
           Este video se reproduce en la plataforma Duomo
         </p>
       </div>
-      
       {rawUrl && (
-        <Button 
+        <Button
           size="lg"
           className="bg-[#E8927C] hover:bg-[#D4845A] text-white mt-2"
           asChild
@@ -208,8 +195,6 @@ function VideoPlayer({ module }: { module: CourseModule }) {
           </a>
         </Button>
       )}
-      
-      {/* Info de completion si existe */}
       {module.completiondata?.state === 1 && (
         <Badge className="bg-green-500 text-white absolute top-4 right-4">
           <CheckCircle2 className="w-3 h-3 mr-1" />
@@ -265,17 +250,18 @@ function ExternalModuleCard({
 
 /** resource: PDF, imagen u otro archivo */
 function ResourceViewer({ module }: { module: CourseModule }) {
-  // CORRECCIÓN: Obtener token de localStorage para transformar URLs
   const token = localStorage.getItem('moodle_token');
   const fileContent = module.contents?.find((c) => c.type === 'file');
   const rawFileUrl = fileContent?.fileurl ?? module.url;
-  // CORRECCIÓN: Transformar URL con token para archivos de pluginfile.php
+  // Transformar URL con token para archivos de pluginfile.php
   const fileUrl = rawFileUrl ? getMoodleFileUrl(rawFileUrl, token) : rawFileUrl;
   const mimetype = fileContent?.mimetype ?? '';
   const filename = fileContent?.filename ?? module.name;
 
   const isPdf = mimetype === 'application/pdf' || /\.pdf(\?.*)?$/i.test(fileUrl ?? '');
-  const isImage = mimetype.startsWith('image/') || /\.(png|jpg|jpeg|gif|webp|svg)(\?.*)?$/i.test(fileUrl ?? '');
+  const isImage =
+    mimetype.startsWith('image/') ||
+    /\.(png|jpg|jpeg|gif|webp|svg)(\?.*)?$/i.test(fileUrl ?? '');
 
   if (!fileUrl) {
     return (
@@ -288,7 +274,6 @@ function ResourceViewer({ module }: { module: CourseModule }) {
 
   return (
     <div className="space-y-4">
-      {/* Descripción */}
       {module.description && (
         <div
           className="prose max-w-none text-sm text-gray-600"
@@ -296,14 +281,9 @@ function ResourceViewer({ module }: { module: CourseModule }) {
         />
       )}
 
-      {/* Previsualización */}
       {isPdf && (
         <div className="border rounded-lg overflow-hidden" style={{ height: '70vh' }}>
-          <iframe
-            src={fileUrl}
-            title={filename}
-            className="w-full h-full"
-          />
+          <iframe src={fileUrl} title={filename} className="w-full h-full" />
         </div>
       )}
 
@@ -317,7 +297,6 @@ function ResourceViewer({ module }: { module: CourseModule }) {
         </div>
       )}
 
-      {/* Botones de acción */}
       <div className="flex flex-wrap gap-3 pt-2">
         {(isPdf || isImage) && (
           <Button variant="outline" asChild>
@@ -353,7 +332,6 @@ function ModuleActivityRenderer({ module }: { module: CourseModule }) {
   if (modname === 'supervideo' || modname === 'video') {
     return <VideoPlayer module={module} />;
   }
-
   if (modname === 'quiz') {
     return (
       <ExternalModuleCard
@@ -365,7 +343,6 @@ function ModuleActivityRenderer({ module }: { module: CourseModule }) {
       />
     );
   }
-
   if (modname === 'forum') {
     return (
       <ExternalModuleCard
@@ -377,7 +354,6 @@ function ModuleActivityRenderer({ module }: { module: CourseModule }) {
       />
     );
   }
-
   if (modname === 'coursecertificate' || modname === 'certificate') {
     return (
       <ExternalModuleCard
@@ -389,12 +365,11 @@ function ModuleActivityRenderer({ module }: { module: CourseModule }) {
       />
     );
   }
-
   if (modname === 'resource') {
     return <ResourceViewer module={module} />;
   }
 
-  // Fallback genérico para tipos no contemplados (url, page, assign, etc.)
+  // Fallback genérico
   return (
     <div className="flex flex-col items-center gap-4 py-8 text-center">
       <BookOpen className="w-16 h-16 text-gray-300" />
@@ -434,7 +409,6 @@ export function ModuleDetail() {
   const [course, setCourse] = useState<CourseDetail | null>(null);
   const [currentSection, setCurrentSection] = useState<CourseSection | null>(null);
   const [currentSectionIndex, setCurrentSectionIndex] = useState<number>(-1);
-  // Índice de la actividad seleccionada dentro de la sección
   const [selectedActivityIndex, setSelectedActivityIndex] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -446,48 +420,50 @@ export function ModuleDetail() {
     }
   }, [courseId, moduleId]);
 
-  // Cuando cambia la actividad seleccionada, hacer scroll al contenido
   useEffect(() => {
     contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [selectedActivityIndex]);
 
   const loadModuleData = async (cId: number, mId: number) => {
-  try {
-    setIsLoading(true);
-    setError(null);
+    try {
+      setIsLoading(true);
+      setError(null);
 
-    const courseData = await moodleApi.getCourseById(cId);
+      // FIX: usar courseData.sections directamente (ya contienen los tokens)
+      // NO sobreescribir con courseContent crudo
+      const courseData = await moodleApi.getCourseById(cId);
 
-    if (!courseData) {
-      setError('No se pudo cargar el curso');
-      return;
+      if (!courseData) {
+        setError('No se pudo cargar el curso');
+        return;
+      }
+
+      setCourse(courseData);
+
+      const sections = courseData.sections ?? [];
+      const sectionIndex = sections.findIndex((s: CourseSection) => s.id === mId);
+
+      if (sectionIndex !== -1) {
+        setCurrentSection(sections[sectionIndex]);
+        setCurrentSectionIndex(sectionIndex);
+        setSelectedActivityIndex(0);
+      } else {
+        setError('Módulo no encontrado');
+      }
+    } catch (err: unknown) {
+      console.error('Error al cargar módulo:', err);
+      setError('Error al cargar el módulo. Por favor intenta de nuevo.');
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    // courseData.sections ya vienen transformadas con tokens desde getCourseById
-    setCourse(courseData);
-
-    const sections = courseData.sections ?? [];
-    const sectionIndex = sections.findIndex((s: CourseSection) => s.id === mId);
-    if (sectionIndex !== -1) {
-      setCurrentSection(sections[sectionIndex]);
-      setCurrentSectionIndex(sectionIndex);
-      setSelectedActivityIndex(0);
-    } else {
-      setError('Módulo no encontrado');
+  // FIX: navegación usa course.sections (ya transformadas)
+  const navigateToSection = (index: number) => {
+    if (course?.sections?.[index]) {
+      navigate(`/courses/${course.id}/modules/${course.sections[index].id}`);
     }
-  } catch (err: unknown) {
-    console.error('Error al cargar módulo:', err);
-    setError('Error al cargar el módulo. Por favor intenta de nuevo.');
-  } finally {
-    setIsLoading(false);
-  }
-};
-
- const navigateToSection = (index: number) => {
-  if (course?.sections?.[index]) {
-    navigate(`/courses/${course.id}/modules/${course.sections[index].id}`);
-  }
-};
+  };
 
   const goToPrevious = () => {
     if (currentSectionIndex > 0) navigateToSection(currentSectionIndex - 1);
@@ -499,10 +475,8 @@ export function ModuleDetail() {
     }
   };
 
-  // ── Loading ──
   if (isLoading) return <ModuleDetailSkeleton />;
 
-  // ── Error ──
   if (error || !course || !currentSection) {
     return (
       <div className="space-y-6">
@@ -522,18 +496,17 @@ export function ModuleDetail() {
   const hasNext = course.sections != null && currentSectionIndex < course.sections.length - 1;
   const totalSections = course.sections?.length ?? 0;
 
-  // Progreso: secciones anteriores / total (aproximación)
   const completedSections = currentSectionIndex;
   const progress = totalSections > 0 ? (completedSections / totalSections) * 100 : 0;
 
-  // Actividades de la sección actual (excluir labels sin contenido)
+  // Actividades visibles (sin labels vacíos)
   const activities = (currentSection.modules ?? []).filter(
     (m) => m.modname !== 'label' && m.uservisible !== false
   );
   const selectedActivity = activities[selectedActivityIndex] ?? null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* ── Breadcrumb ── */}
       <Breadcrumb>
         <BreadcrumbItem>
@@ -561,30 +534,55 @@ export function ModuleDetail() {
         </BreadcrumbItem>
       </Breadcrumb>
 
-      {/* ── Header con navegación entre secciones ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate(`/courses/${course.id}`)}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Volver al curso
+      {/* ── Header de navegación mejorado (sin encimamiento) ── */}
+      <div className="flex items-center justify-between gap-4 py-2 px-4 bg-white border rounded-xl shadow-sm">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate(`/courses/${course.id}`)}
+          className="flex-shrink-0"
+        >
+          <ArrowLeft className="w-4 h-4 mr-1" />
+          <span className="hidden sm:inline">Volver</span>
         </Button>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={goToPrevious} disabled={!hasPrevious}>
-            <ChevronLeft className="w-4 h-4 mr-1" />
-            Anterior
-          </Button>
-          <span className="text-sm text-gray-500 px-2 whitespace-nowrap">
+
+        <div className="flex items-center gap-2 min-w-0 flex-1 justify-center">
+          <span className="font-medium text-gray-900 truncate max-w-[200px] hidden sm:block text-sm">
+            {currentSection.name}
+          </span>
+          <span className="text-gray-400 hidden sm:block">·</span>
+          <span className="text-sm text-gray-500 whitespace-nowrap flex-shrink-0">
             {currentSectionIndex + 1} / {totalSections}
           </span>
-          <Button variant="outline" size="sm" onClick={goToNext} disabled={!hasNext}>
-            Siguiente
-            <ChevronRight className="w-4 h-4 ml-1" />
+        </div>
+
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={goToPrevious}
+            disabled={!hasPrevious}
+            className="px-2 sm:px-3"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span className="hidden sm:inline ml-1">Anterior</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={goToNext}
+            disabled={!hasNext}
+            className="px-2 sm:px-3"
+          >
+            <span className="hidden sm:inline mr-1">Siguiente</span>
+            <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
       </div>
 
       {/* ── Título de la sección ── */}
       <div>
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2 mb-1">
           <Badge variant="secondary" className="bg-amber-100 text-amber-700">
             Módulo {currentSectionIndex + 1}
           </Badge>
@@ -597,7 +595,7 @@ export function ModuleDetail() {
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{currentSection.name}</h1>
         {currentSection.summary && (
           <div
-            className="prose max-w-none mt-3 text-gray-600"
+            className="prose max-w-none mt-2 text-gray-600"
             dangerouslySetInnerHTML={{ __html: currentSection.summary }}
           />
         )}
@@ -621,7 +619,8 @@ export function ModuleDetail() {
 
       {/* ── Layout principal ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* ── Columna principal: contenido de la actividad seleccionada ── */}
+
+        {/* ── Columna principal: solo el contenido de la actividad ── */}
         <div className="lg:col-span-2 space-y-4" ref={contentRef}>
           {activities.length === 0 ? (
             <Card>
@@ -630,237 +629,175 @@ export function ModuleDetail() {
                 <p className="text-gray-500">Este módulo no tiene contenido disponible.</p>
               </CardContent>
             </Card>
-          ) : (
-            <>
-              {/* Selector de actividades (si hay más de una) */}
-              {activities.length > 1 && (
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <BookOpen className="w-4 h-4 text-[#8B9A7D]" />
-                      Actividades de este módulo
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="divide-y divide-gray-100">
-                      {activities.map((activity, idx) => {
-                        const Icon = getModuleIcon(activity.modname);
-                        const isSelected = idx === selectedActivityIndex;
-                        const isCompleted = activity.completiondata?.state === 1;
-                        return (
-                          <button
-                            key={activity.id}
-                            onClick={() => setSelectedActivityIndex(idx)}
+          ) : selectedActivity ? (
+            <Card>
+              <CardHeader>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    {(() => {
+                      const Icon = getModuleIcon(selectedActivity.modname);
+                      return (
+                        <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Icon className="w-5 h-5 text-amber-600" />
+                        </div>
+                      );
+                    })()}
+                    <div>
+                      <CardTitle className="text-lg leading-tight">
+                        {selectedActivity.name}
+                      </CardTitle>
+                      <Badge variant="outline" className="mt-1 text-xs">
+                        {getModuleLabel(selectedActivity.modname)}
+                      </Badge>
+                    </div>
+                  </div>
+                  {selectedActivity.completiondata?.state === 1 && (
+                    <Badge className="bg-green-100 text-green-700 border-0 flex-shrink-0">
+                      <CheckCircle2 className="w-3 h-3 mr-1" />
+                      Completado
+                    </Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ModuleActivityRenderer module={selectedActivity} />
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
+
+        {/* ── Sidebar ── */}
+        <div className="space-y-4">
+
+          {/* Lista de actividades del módulo actual (solo si hay más de una) */}
+          {activities.length > 1 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-[#8B9A7D]" />
+                  Actividades ({activities.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="divide-y divide-gray-100">
+                  {activities.map((activity, idx) => {
+                    const Icon = getModuleIcon(activity.modname);
+                    const isSelected = idx === selectedActivityIndex;
+                    const isCompleted = activity.completiondata?.state === 1;
+                    return (
+                      <button
+                        key={activity.id}
+                        onClick={() => setSelectedActivityIndex(idx)}
+                        className={cn(
+                          'w-full flex items-center gap-3 px-4 py-3 text-left transition-colors',
+                          isSelected
+                            ? 'bg-amber-50 border-l-4 border-amber-500'
+                            : 'border-l-4 border-transparent hover:bg-gray-50'
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            'w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0',
+                            isCompleted
+                              ? 'bg-green-100'
+                              : isSelected
+                              ? 'bg-amber-100'
+                              : 'bg-gray-100'
+                          )}
+                        >
+                          {isCompleted ? (
+                            <CheckCircle2 className="w-4 h-4 text-green-600" />
+                          ) : (
+                            <Icon
+                              className={cn(
+                                'w-4 h-4',
+                                isSelected ? 'text-amber-600' : 'text-gray-500'
+                              )}
+                            />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p
                             className={cn(
-                              'w-full flex items-center gap-3 px-4 py-3 text-left transition-colors',
-                              isSelected
-                                ? 'bg-amber-50 border-l-4 border-amber-500'
-                                : 'border-l-4 border-transparent hover:bg-gray-50'
+                              'text-xs font-medium truncate',
+                              isSelected ? 'text-gray-900' : 'text-gray-700'
                             )}
                           >
-                            <div
-                              className={cn(
-                                'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
-                                isCompleted ? 'bg-green-100' : isSelected ? 'bg-amber-100' : 'bg-gray-100'
-                              )}
-                            >
-                              {isCompleted ? (
-                                <CheckCircle2 className="w-4 h-4 text-green-600" />
-                              ) : (
-                                <Icon
-                                  className={cn(
-                                    'w-4 h-4',
-                                    isSelected ? 'text-amber-600' : 'text-gray-500'
-                                  )}
-                                />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p
-                                className={cn(
-                                  'text-sm font-medium truncate',
-                                  isSelected ? 'text-gray-900' : 'text-gray-700'
-                                )}
-                              >
-                                {idx + 1}. {activity.name}
-                              </p>
-                              <p className="text-xs text-gray-500">{getModuleLabel(activity.modname)}</p>
-                            </div>
-                            {isCompleted && (
-                              <Badge
-                                variant="secondary"
-                                className="text-xs bg-green-100 text-green-700 flex-shrink-0"
-                              >
-                                Completado
-                              </Badge>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Contenido de la actividad seleccionada */}
-              {selectedActivity && (
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        {(() => {
-                          const Icon = getModuleIcon(selectedActivity.modname);
-                          return (
-                            <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                              <Icon className="w-5 h-5 text-amber-600" />
-                            </div>
-                          );
-                        })()}
-                        <div>
-                          <CardTitle className="text-lg leading-tight">
-                            {selectedActivity.name}
-                          </CardTitle>
-                          <Badge variant="outline" className="mt-1 text-xs">
-                            {getModuleLabel(selectedActivity.modname)}
-                          </Badge>
+                            {idx + 1}. {activity.name}
+                          </p>
+                          <p className="text-[11px] text-gray-500">
+                            {getModuleLabel(activity.modname)}
+                          </p>
                         </div>
-                      </div>
-                      {selectedActivity.completiondata?.state === 1 && (
-                        <Badge className="bg-green-100 text-green-700 border-0 flex-shrink-0">
-                          <CheckCircle2 className="w-3 h-3 mr-1" />
-                          Completado
-                        </Badge>
+                        {isCompleted && (
+                          <Badge
+                            variant="secondary"
+                            className="text-[10px] bg-green-100 text-green-700 flex-shrink-0 px-1.5"
+                          >
+                            ✓
+                          </Badge>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Lista de todas las secciones del curso */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Todos los Módulos</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y divide-gray-100 max-h-72 overflow-y-auto">
+                {course.sections?.map((section, index) => (
+                  <button
+                    key={section.id}
+                    onClick={() => navigateToSection(index)}
+                    className={cn(
+                      'w-full flex items-center gap-3 p-3 text-left transition-colors hover:bg-gray-50',
+                      index === currentSectionIndex
+                        ? 'bg-amber-50 border-l-4 border-amber-500'
+                        : 'border-l-4 border-transparent'
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        'w-6 h-6 rounded flex items-center justify-center text-xs font-medium flex-shrink-0',
+                        index === currentSectionIndex
+                          ? 'bg-amber-500 text-white'
+                          : index < currentSectionIndex
+                          ? 'bg-green-100 text-green-600'
+                          : 'bg-gray-100 text-gray-500'
+                      )}
+                    >
+                      {index < currentSectionIndex ? (
+                        <CheckCircle2 className="w-3 h-3" />
+                      ) : (
+                        index + 1
                       )}
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <ModuleActivityRenderer module={selectedActivity} />
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Navegación entre actividades dentro de la sección */}
-              {activities.length > 1 && (
-                <div className="flex items-center justify-between pt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedActivityIndex((i) => Math.max(0, i - 1))}
-                    disabled={selectedActivityIndex === 0}
-                  >
-                    <ChevronLeft className="w-4 h-4 mr-1" />
-                    Actividad anterior
-                  </Button>
-                  <span className="text-sm text-gray-500">
-                    {selectedActivityIndex + 1} / {activities.length}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setSelectedActivityIndex((i) => Math.min(activities.length - 1, i + 1))
-                    }
-                    disabled={selectedActivityIndex === activities.length - 1}
-                  >
-                    Siguiente actividad
-                    <ChevronRight className="w-4 h-4 ml-1" />
-                  </Button>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-       {/* ── Sidebar ── */}
-<div className="space-y-4">
-  {/* Lista de actividades del módulo actual */}
-  {activities.length > 1 && (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2">
-          <BookOpen className="w-4 h-4 text-[#8B9A7D]" />
-          Actividades ({activities.length})
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-0">
-        <div className="divide-y divide-gray-100">
-          {activities.map((activity, idx) => {
-            const Icon = getModuleIcon(activity.modname);
-            const isSelected = idx === selectedActivityIndex;
-            const isCompleted = activity.completiondata?.state === 1;
-            return (
-              <button
-                key={activity.id}
-                onClick={() => setSelectedActivityIndex(idx)}
-                className={cn(
-                  'w-full flex items-center gap-3 px-4 py-3 text-left transition-colors',
-                  isSelected
-                    ? 'bg-amber-50 border-l-4 border-amber-500'
-                    : 'border-l-4 border-transparent hover:bg-gray-50'
-                )}
-              >
-                <div className={cn(
-                  'w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0',
-                  isCompleted ? 'bg-green-100' : isSelected ? 'bg-amber-100' : 'bg-gray-100'
-                )}>
-                  {isCompleted
-                    ? <CheckCircle2 className="w-4 h-4 text-green-600" />
-                    : <Icon className={cn('w-4 h-4', isSelected ? 'text-amber-600' : 'text-gray-500')} />
-                  }
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className={cn('text-xs font-medium truncate', isSelected ? 'text-gray-900' : 'text-gray-700')}>
-                    {idx + 1}. {activity.name}
-                  </p>
-                  <p className="text-[11px] text-gray-500">{getModuleLabel(activity.modname)}</p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </CardContent>
-    </Card>
-  )}
-
-  {/* Lista de todas las secciones */}
-  <Card>
-    <CardHeader>
-      <CardTitle className="text-base">Todos los Módulos</CardTitle>
-    </CardHeader>
-    <CardContent className="p-0">
-      <div className="divide-y divide-gray-100 max-h-72 overflow-y-auto">
-        {course.sections?.map((section, index) => (
-          <button
-            key={section.id}
-            onClick={() => navigateToSection(index)}
-            className={cn(
-              'w-full flex items-center gap-3 p-3 text-left transition-colors hover:bg-gray-50',
-              index === currentSectionIndex
-                ? 'bg-amber-50 border-l-4 border-amber-500'
-                : 'border-l-4 border-transparent'
-            )}
-          >
-            <div className={cn(
-              'w-6 h-6 rounded flex items-center justify-center text-xs font-medium flex-shrink-0',
-              index === currentSectionIndex ? 'bg-amber-500 text-white'
-                : index < currentSectionIndex ? 'bg-green-100 text-green-600'
-                : 'bg-gray-100 text-gray-500'
-            )}>
-              {index < currentSectionIndex ? <CheckCircle2 className="w-3 h-3" /> : index + 1}
-            </div>
-            <span className={cn('text-sm truncate', index === currentSectionIndex ? 'font-medium text-gray-900' : 'text-gray-600')}>
-              {section.name || `Módulo ${index + 1}`}
-            </span>
-          </button>
-        ))}
-      </div>
-    </CardContent>
-  </Card>
-</div>
+                    <span
+                      className={cn(
+                        'text-sm truncate',
+                        index === currentSectionIndex
+                          ? 'font-medium text-gray-900'
+                          : 'text-gray-600'
+                      )}
+                    >
+                      {section.name || `Módulo ${index + 1}`}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Info del curso */}
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-2">
               <CardTitle className="text-base">Información</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -880,6 +817,7 @@ export function ModuleDetail() {
               </div>
             </CardContent>
           </Card>
+
         </div>
       </div>
     </div>
@@ -892,27 +830,23 @@ export function ModuleDetail() {
 
 function ModuleDetailSkeleton() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <Skeleton className="h-6 w-64" />
-      <div className="flex justify-between">
-        <Skeleton className="h-10 w-32" />
-        <Skeleton className="h-10 w-48" />
-      </div>
+      <Skeleton className="h-14 w-full rounded-xl" />
       <div>
-        <Skeleton className="h-8 w-24 mb-2" />
+        <Skeleton className="h-6 w-24 mb-2" />
         <Skeleton className="h-10 w-96" />
-        <Skeleton className="h-16 w-full mt-4" />
+        <Skeleton className="h-12 w-full mt-3" />
       </div>
       <Skeleton className="h-16 w-full" />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
-          <Skeleton className="h-48 w-full" />
           <Skeleton className="h-64 w-full" />
         </div>
         <div className="space-y-4">
-          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-48 w-full" />
           <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-28 w-full" />
         </div>
       </div>
     </div>

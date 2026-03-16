@@ -22,7 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/context/AuthContext';
 import { moodleApi } from '@/services/moodleApi';
@@ -39,6 +39,7 @@ import {
   LineChart,
   Line
 } from 'recharts';
+
 
 interface StudentActivity {
   user: User;
@@ -543,11 +544,18 @@ export function Statistics() {
                       <tr key={student.user.id} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10">
-                              <AvatarFallback className="bg-gradient-to-br from-[#8B9A7D] to-[#6B7A5D] text-white text-sm">
-                                {getInitials(student.user.fullname)}
-                              </AvatarFallback>
-                            </Avatar>
+                          <Avatar className="h-10 w-10">
+  <AvatarImage 
+    src={student.user.profileimageurl} 
+    alt={student.user.fullname}
+    onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+      e.currentTarget.style.display = 'none';
+    }}
+  />
+  <AvatarFallback className="bg-gradient-to-br from-[#8B9A7D] to-[#6B7A5D] text-white text-sm">
+    {getInitials(student.user.fullname)}
+  </AvatarFallback>
+</Avatar>
                             <div>
                               <p className="font-medium text-gray-900">{student.user.fullname}</p>
                               <p className="text-xs text-gray-500">{student.user.email}</p>

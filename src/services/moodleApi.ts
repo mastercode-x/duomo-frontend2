@@ -1162,84 +1162,69 @@ class MoodleApiClient {
     }
   }
 
+  
   async getAllStudents(teacherCourses: Course[]): Promise<User[]> {
-    const allStudents = new Map<number, User>();
-    
-    // Roles que deben ser EXCLUIDOS (shortname)
-    const EXCLUDED_ROLE_SHORTNAMES = new Set([
-      'editingteacher', 'teacher', 'manager', 'supervisor', 'guest', 'admin',
-      'coursecreator', 'frontpage'
-    ]);
+  const allStudents = new Map<number, User>();
+  
+  const EXCLUDED_ROLE_SHORTNAMES = new Set([
+    'editingteacher', 'teacher', 'manager', 'supervisor', 'guest', 'admin',
+    'coursecreator', 'frontpage'
+  ]);
+  const EXCLUDED_ROLE_IDS = new Set([1, 2, 3, 4, 6, 7]);
 
-    // IDs numéricos de roles que deben ser EXCLUIDOS en Moodle estándar:
-    // 1=manager, 2=coursecreator, 3=editingteacher, 4=teacher, 5=student, 6=guest, 7=frontpage
-    const EXCLUDED_ROLE_IDS = new Set([1, 2, 3, 4, 6, 7]);
+  for (const course of teacherCourses) {
+    try {
+      const rawData = await this.request<any[]>('core_enrol_get_enrolled_users', {
+        courseid: course.id,
+        'options[0][name]': 'onlyactive',
+        'options[0][value]': '1',
+      });
+      
+      if (!Array.isArray(rawData)) continue;
 
-    for (const course of teacherCourses) {
-      try {
-        // Obtener usuarios matriculados con datos crudos (antes de transformUser)
-        const rawData = await this.request<any[]>('core_enrol_get_enrolled_users', { courseid: course.id });
-        
-        if (!Array.isArray(rawData)) continue;
+      rawData.forEach((rawUser: any) => {
+        const rawRoles: any[] = Array.isArray(rawUser.roles) ? rawUser.roles : [];
 
-        rawData.forEach((rawUser: any) => {
-          // Extraer roles del usuario (pueden venir como array de objetos con shortname/roleid)
-          const rawRoles: any[] = Array.isArray(rawUser.roles) ? rawUser.roles : [];
-
-          // Verificar exclusión por shortname
-          const hasExcludedShortname = rawRoles.some((r: any) => {
+        // Filtro 1: por shortname/roleid si los roles están disponibles
+        if (rawRoles.length > 0) {
+          const hasExcludedRole = rawRoles.some((r: any) => {
             const sn = (r.shortname || '').toLowerCase();
-            return EXCLUDED_ROLE_SHORTNAMES.has(sn);
+            const rid = typeof r.roleid === 'number' ? r.roleid : parseInt(r.roleid || '0', 10);
+            return EXCLUDED_ROLE_SHORTNAMES.has(sn) || EXCLUDED_ROLE_IDS.has(rid);
           });
+          if (hasExcludedRole) return;
+        }
 
-          // Verificar exclusión por roleid numérico
-          const hasExcludedRoleId = rawRoles.some((r: any) => {
-            const rid = typeof r.roleid === 'number' ? r.roleid : parseInt(r.roleid, 10);
-            return EXCLUDED_ROLE_IDS.has(rid);
-          });
+        const user = this.transformUser(rawUser);
 
-          const EXCLUDED_ROLE_NAME_KEYWORDS = ['teacher', 'profesor', 'instructor', 'manager', 'admin'];
-const hasExcludedName = rawRoles.some((r: any) => {
-  const name = (r.name || '').toLowerCase();
-  return EXCLUDED_ROLE_NAME_KEYWORDS.some(kw => name.includes(kw));
-});
+        // Filtro 2: por customfield profile_field_role (más confiable)
+        const roleField = user.customfields?.find(
+          (f: any) => f.shortname === 'role' || f.shortname === 'profile_field_role'
+        );
+        if (roleField?.value) {
+          const roleVal = roleField.value.toLowerCase();
+          if (['teacher', 'editingteacher', 'admin', 'manager'].includes(roleVal)) return;
+        }
 
-          // Si tiene roles y alguno es excluido, saltar este usuario
-          if (rawRoles.length > 0 && (hasExcludedShortname || hasExcludedRoleId || hasExcludedName)) {
-            return;
-          }
+        // Filtro 3: por shortname transformados
+        const transformedRoles = (user.roles as unknown as string[]) || [];
+        if (transformedRoles.some(r => EXCLUDED_ROLE_SHORTNAMES.has((r || '').toLowerCase()))) return;
 
-          // Si no tiene roles en el array pero el campo 'roles' es un array vacío,
-          // verificar si tiene rol de estudiante por otros campos (e.g. 'student' en groups)
-          // En ese caso, incluirlo (es un estudiante sin rol explícito en la respuesta)
-
-          const user = this.transformUser(rawUser);
-
-          // Doble verificación post-transform con shortnames
-          const transformedRoles: string[] = user.roles as unknown as string[];
-          const hasExcludedTransformed = transformedRoles.some(r =>
-            EXCLUDED_ROLE_SHORTNAMES.has((r || '').toLowerCase())
-          );
-          if (hasExcludedTransformed) return;
-
-          if (!allStudents.has(user.id)) {
-            allStudents.set(user.id, {
-              ...user,
-              enrolledCourses: [course],
-            } as User);
-          } else {
-            const existing = allStudents.get(user.id)!;
-            if (!existing.enrolledCourses) existing.enrolledCourses = [];
-            existing.enrolledCourses.push(course);
-          }
-        });
-      } catch (error) {
-        console.warn(`Error al obtener estudiantes del curso ${course.id}:`, error);
-      }
+        if (!allStudents.has(user.id)) {
+          allStudents.set(user.id, { ...user, enrolledCourses: [course] } as User);
+        } else {
+          const existing = allStudents.get(user.id)!;
+          if (!existing.enrolledCourses) existing.enrolledCourses = [];
+          existing.enrolledCourses.push(course);
+        }
+      });
+    } catch (error) {
+      console.warn(`Error al obtener estudiantes del curso ${course.id}:`, error);
     }
-    
-    return Array.from(allStudents.values());
   }
+  
+  return Array.from(allStudents.values());
+}
 
   async getGlobalStatistics(): Promise<any[]> {
     try {

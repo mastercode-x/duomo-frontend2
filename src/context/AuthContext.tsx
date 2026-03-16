@@ -16,6 +16,7 @@ const AUTH_MODE = import.meta.env.VITE_AUTH_MODE || 'demo';
 
 interface AuthContextType {
   user: User | null;
+  token: string | null;           // ← NUEVO: token expuesto para useMoodleImageUrl
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -50,6 +51,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(              // ← NUEVO
+    () => localStorage.getItem('moodle_token')                    // inicializar desde localStorage
+  );
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,12 +75,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setErrorCode(null);
       
       if (AUTH_MODE === 'demo') {
-        // En modo demo, verificar si hay usuario en localStorage
         const savedUser = localStorage.getItem('demo_user');
+        const savedToken = localStorage.getItem('demo_token');
         if (savedUser) {
           try {
             const parsedUser = JSON.parse(savedUser);
             setUser(parsedUser);
+            setToken(savedToken);                                  // ← NUEVO
             setIsAuthenticated(true);
           } catch (e) {
             console.error('Error al parsear usuario demo:', e);
@@ -88,12 +93,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
       
       // Modo Moodle real
-      const token = localStorage.getItem('moodle_token');
+      const storedToken = localStorage.getItem('moodle_token');
       
-      if (!token) {
+      if (!storedToken) {
         setIsLoading(false);
         return;
       }
+
+      setToken(storedToken);                                       // ← NUEVO: sincronizar token al inicio
 
       // Verificar token válido obteniendo información del usuario
       const userProfile = await moodleApi.getUserProfile();
@@ -103,7 +110,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (err: any) {
       console.error('Error al verificar autenticación:', err);
       
-      // Manejar errores específicos
       if (err.errorcode === 'invalidtoken') {
         setError('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
         setErrorCode('invalidtoken');
@@ -118,7 +124,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setErrorCode(err.errorcode || 'unknown');
       }
       
-      // Token inválido, limpiar
+      setToken(null);                                              // ← NUEVO: limpiar token en error
       moodleApi.logout();
     } finally {
       setIsLoading(false);
@@ -138,10 +144,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       let response: AuthResponse;
 
       if (AUTH_MODE === 'demo') {
-        // Usar autenticación de demo
         response = await demoAuth.login(username, password);
       } else {
-        // Usar autenticación de Moodle
         response = await moodleApi.login(username, password);
       }
 
@@ -159,10 +163,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return false;
       }
 
-      // Guardar usuario en localStorage para demo
       if (AUTH_MODE === 'demo') {
         localStorage.setItem('demo_user', JSON.stringify(response.user));
         localStorage.setItem('demo_token', response.token || '');
+        setToken(response.token || null);                          // ← NUEVO
+      } else {
+        // En modo Moodle, el token ya fue guardado en localStorage por moodleApi.login()
+        // Solo necesitamos sincronizarlo al estado de React
+        const newToken = response.token || localStorage.getItem('moodle_token');
+        setToken(newToken || null);                                // ← NUEVO
       }
 
       setUser(response.user);
@@ -201,6 +210,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
       
       setUser(null);
+      setToken(null);                                              // ← NUEVO: limpiar token al logout
       setIsAuthenticated(false);
       setError(null);
       setErrorCode(null);
@@ -228,6 +238,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const userProfile = await moodleApi.getUserProfile();
       setUser(userProfile);
+      // Resincronizar token por las dudas
+      const currentToken = localStorage.getItem('moodle_token');  // ← NUEVO
+      if (currentToken) setToken(currentToken);                   // ← NUEVO
     } catch (err) {
       console.error('Error al refrescar usuario:', err);
     }
@@ -246,7 +259,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         ...userData
       });
       
-      // Actualizar el usuario en el estado
       setUser(prev => prev ? { ...prev, ...userData } : null);
     } catch (err) {
       console.error('Error al actualizar usuario:', err);
@@ -291,6 +303,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const value: AuthContextType = {
     user,
+    token,                                                         // ← NUEVO: expuesto en el context
     isAuthenticated,
     isLoading,
     error,
