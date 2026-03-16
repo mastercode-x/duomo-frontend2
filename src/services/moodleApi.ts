@@ -1413,8 +1413,6 @@ class MoodleApiClient {
   // ============================================
 
   private transformUser(data: any): User {
-  const token = this.getToken();
- 
   return {
     id: data.id,
     username: data.username || '',
@@ -1422,8 +1420,9 @@ class MoodleApiClient {
     lastname: data.lastname || '',
     fullname: data.fullname || `${data.firstname || ''} ${data.lastname || ''}`.trim(),
     email: data.email || '',
-    profileimageurl: this.safeProfileImageUrl(data.profileimageurl, token),
-    profileimageurlsmall: this.safeProfileImageUrl(data.profileimageurlsmall, token),
+    // ✅ URL tal cual — sin addTokenToPluginfileUrl
+    profileimageurl: data.profileimageurl,
+    profileimageurlsmall: data.profileimageurlsmall,
     department: data.department,
     institution: data.institution,
     city: data.city,
@@ -1438,54 +1437,43 @@ class MoodleApiClient {
     lastaccess: data.lastaccess,
     lastcourseaccess: data.lastcourseaccess,
     suspended: data.suspended,
-    roles: Array.isArray(data.roles)
-      ? data.roles.map((r: any) => r.shortname || r)
-      : [],
+    roles: Array.isArray(data.roles) ? data.roles.map((r: any) => r.shortname || r) : [],
     preferences: data.preferences,
-    customfields: Array.isArray(data.customfields)
-      ? data.customfields.map((f: any) => ({
-          name: f.name,
-          value: f.value,
-          type: f.type,
-          shortname: f.shortname,
-        }))
-      : [],
+    customfields: Array.isArray(data.customfields) ? data.customfields.map((f: any) => ({
+      name: f.name,
+      value: f.value,
+      type: f.type,
+      shortname: f.shortname,
+    })) : [],
   };
 }
-
-  private transformCourse(data: any): Course {
-    // Las imágenes de Moodle requieren autenticación. Convertir URLs de pluginfile.php
-    // al endpoint webservice/pluginfile.php con el token del usuario.
-    const token = this.getToken();
-    const rawImageUrl: string | undefined = data.overviewfiles?.[0]?.fileurl ?? data.courseimage;
-    const courseimage = rawImageUrl
-      ? this.addTokenToPluginfileUrl(rawImageUrl, token)
-      : undefined;
-
-    return {
-      id: data.id,
-      shortname: data.shortname || '',
-      fullname: data.fullname || '',
-      displayname: data.displayname || data.fullname || '',
-      summary: data.summary,
-      summaryformat: data.summaryformat,
-      categoryid: data.category,
-      categoryname: data.categoryname,
-      startdate: data.startdate,
-      enddate: data.enddate,
-      visible: data.visible !== 0,
-      progress: data.progress,
-      completed: data.completed,
-      enrolledusercount: data.enrolledusercount,
-      overviewfiles: data.overviewfiles,
-      courseimage,
-      completionhascriteria: data.completionhascriteria,
-      completionusertracked: data.completionusertracked,
-      lastaccess: data.lastaccess,
-      isfavourite: data.isfavourite,
-      hidden: data.hidden,
-    };
-  }
+ 
+private transformCourse(data: any): Course {
+  return {
+    id: data.id,
+    shortname: data.shortname || '',
+    fullname: data.fullname || '',
+    displayname: data.displayname || data.fullname || '',
+    summary: data.summary,
+    summaryformat: data.summaryformat,
+    categoryid: data.category,
+    categoryname: data.categoryname,
+    startdate: data.startdate,
+    enddate: data.enddate,
+    visible: data.visible !== 0,
+    progress: data.progress,
+    completed: data.completed,
+    enrolledusercount: data.enrolledusercount,
+    overviewfiles: data.overviewfiles,
+    // ✅ fileurl tal cual — sin addTokenToPluginfileUrl
+    courseimage: data.overviewfiles?.[0]?.fileurl,
+    completionhascriteria: data.completionhascriteria,
+    completionusertracked: data.completionusertracked,
+    lastaccess: data.lastaccess,
+    isfavourite: data.isfavourite,
+    hidden: data.hidden,
+  };
+}
 
   /**
    * Convierte una URL de pluginfile.php al endpoint autenticado webservice/pluginfile.php
@@ -1517,68 +1505,50 @@ class MoodleApiClient {
   return result;
 }
 
-  private transformCourseDetail(data: any, contents: any[] = []): CourseDetail {
-    const safeContents = Array.isArray(contents) ? contents : [];
-    
-    return {
-      ...this.transformCourse(data),
-      format: data.format,
-      sections: safeContents.map((section: any) => ({
-        id: section.id,
-        name: section.name,
-        summary: section.summary,
-        summaryformat: section.summaryformat,
-        visible: section.visible,
-        section: section.section,
-        hiddenbynumsections: section.hiddenbynumsections,
-        uservisible: section.uservisible,
-        availabilityinfo: section.availabilityinfo,
-       // DESPUÉS — agregar `contents` al final del objeto:
-modules: Array.isArray(section.modules) ? section.modules.map((mod: any) => ({
-  id: mod.id,
-  url: mod.url,
-  name: mod.name,
-  instance: mod.instance,
-  contextid: mod.contextid,
-  description: mod.description,
-  visible: mod.visible,
-  uservisible: mod.uservisible,
-  visibleoncoursepage: mod.visibleoncoursepage,
-  modicon: mod.modicon,
-  modname: mod.modname,
-  modplural: mod.modplural,
-  availability: mod.availability,
-  indent: mod.indent,
-  onclick: mod.onclick,
-  afterlink: mod.afterlink,
-  customdata: mod.customdata,
-  noviewlink: mod.noviewlink,
-  completion: mod.completion,
-  completiondata: mod.completiondata,
-  dates: mod.dates,
-  contents: Array.isArray(mod.contents)            // ← LÍNEA NUEVA
-    ? mod.contents.map((c: any) => ({
-        type: c.type,
-        filename: c.filename,
-        filepath: c.filepath,
-        filesize: c.filesize,
-        fileurl: this.addTokenToPluginfileUrl(c.fileurl ?? '', this.getToken()),
-        content: c.content,
-        timecreated: c.timecreated,
-        timemodified: c.timemodified,
-        sortorder: c.sortorder,
-        mimetype: c.mimetype,
-        isexternalfile: c.isexternalfile,
-        repositorytype: c.repositorytype,
-        userid: c.userid,
-        author: c.author,
-        license: c.license,
-      }))
-    : [],
-})) : [],
-      })),
-    };
-  }
+ private transformCourseDetail(data: any, contents: any[] = []): CourseDetail {
+  const safeContents = Array.isArray(contents) ? contents : [];
+  
+  return {
+    ...this.transformCourse(data),
+    format: data.format,
+    sections: safeContents.map((section: any) => ({
+      id: section.id,
+      name: section.name,
+      summary: section.summary,
+      summaryformat: section.summaryformat,
+      visible: section.visible,
+      section: section.section,
+      hiddenbynumsections: section.hiddenbynumsections,
+      uservisible: section.uservisible,
+      availabilityinfo: section.availabilityinfo,
+      modules: Array.isArray(section.modules) ? section.modules.map((mod: any) => ({
+        id: mod.id,
+        url: mod.url,
+        name: mod.name,
+        instance: mod.instance,
+        contextid: mod.contextid,
+        description: mod.description,
+        visible: mod.visible,
+        uservisible: mod.uservisible,
+        visibleoncoursepage: mod.visibleoncoursepage,
+        modicon: mod.modicon,
+        modname: mod.modname,
+        modplural: mod.modplural,
+        availability: mod.availability,
+        indent: mod.indent,
+        onclick: mod.onclick,
+        afterlink: mod.afterlink,
+        customdata: mod.customdata,
+        noviewlink: mod.noviewlink,
+        completion: mod.completion,
+        completiondata: mod.completiondata,
+        dates: mod.dates,
+        // ✅ contents tal cual — sin transformación de fileurl
+        contents: Array.isArray(mod.contents) ? mod.contents : [],
+      })) : [],
+    })),
+  };
+}
 
 
 
