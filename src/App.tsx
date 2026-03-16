@@ -173,7 +173,7 @@ function PrivateLayout() {
 function App() {
   return (
     <AuthProvider>
-      <Router basename="/app">
+      <Router basename="/">
         <Routes>
           {/* Rutas Públicas */}
           <Route element={<PublicRoute />}>
