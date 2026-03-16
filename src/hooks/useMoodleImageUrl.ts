@@ -1,25 +1,12 @@
 import { useMemo } from 'react';
-import { useAuth } from '@/context/AuthContext';
 
 export function useMoodleImageUrl(imageUrl: string | undefined): string | undefined {
-  const { token } = useAuth();
-
   return useMemo(() => {
     if (!imageUrl) return undefined;
-
-    if (
-      !imageUrl.includes('campus.duomo.com.ar') ||
-      imageUrl.startsWith('data:') ||
-      imageUrl.startsWith('blob:')
-    ) {
-      return imageUrl;
-    }
-
-    // Todas las URLs de Moodle van por el proxy con token
-    const params = new URLSearchParams({ url: imageUrl });
-    if (token) params.set('token', token);
-    return `/api/image-proxy?${params.toString()}`;
-  }, [imageUrl, token]);
+    if (!imageUrl.includes('campus.duomo.com.ar')) return imageUrl;
+    // Todas las URLs de Moodle por el proxy (que las limpia server-side)
+    return `/api/image-proxy?url=${encodeURIComponent(imageUrl)}`;
+  }, [imageUrl]);
 }
 
 export default useMoodleImageUrl;
