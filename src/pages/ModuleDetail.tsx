@@ -39,6 +39,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { cn } from '@/lib/utils';
+import { getMoodleFileUrl } from '@/lib/moodleUtils';
 import { moodleApi } from '@/services/moodleApi';
 import type { CourseDetail, CourseSection, CourseModule } from '@/types';
 
@@ -179,20 +180,41 @@ function VideoPlayer({ module }: { module: CourseModule }) {
     );
   }
 
-  // Fallback: botón para abrir en Moodle
+  // Fallback mejorado: diseño atractivo de "ver en plataforma"
   return (
-    <div className="flex flex-col items-center gap-4 py-8">
-      <Video className="w-16 h-16 text-gray-300" />
-      <p className="text-gray-500 text-sm">
-        No se pudo incrustar el video. Ábrelo directamente en Moodle.
-      </p>
+    <div className="relative rounded-xl overflow-hidden bg-gradient-to-br from-gray-900 to-gray-700 aspect-video flex flex-col items-center justify-center gap-4 p-8">
+      {/* Botón play grande */}
+      <div className="w-20 h-20 bg-white/20 backdrop-blur rounded-full flex items-center justify-center">
+        <PlayCircle className="w-10 h-10 text-white" />
+      </div>
+      
+      <div className="text-center text-white">
+        <p className="font-semibold text-lg">{module.name}</p>
+        <p className="text-sm text-white/70 mt-1">
+          Este video se reproduce en la plataforma Duomo
+        </p>
+      </div>
+      
       {rawUrl && (
-        <Button asChild>
+        <Button 
+          size="lg"
+          className="bg-[#E8927C] hover:bg-[#D4845A] text-white mt-2"
+          asChild
+        >
           <a href={rawUrl} target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="w-4 h-4 mr-2" />
-            Abrir video
+            <PlayCircle className="w-5 h-5 mr-2" />
+            Ver video
+            <ExternalLink className="w-4 h-4 ml-2" />
           </a>
         </Button>
+      )}
+      
+      {/* Info de completion si existe */}
+      {module.completiondata?.state === 1 && (
+        <Badge className="bg-green-500 text-white absolute top-4 right-4">
+          <CheckCircle2 className="w-3 h-3 mr-1" />
+          Completado
+        </Badge>
       )}
     </div>
   );
@@ -243,8 +265,12 @@ function ExternalModuleCard({
 
 /** resource: PDF, imagen u otro archivo */
 function ResourceViewer({ module }: { module: CourseModule }) {
+  // CORRECCIÓN: Obtener token de localStorage para transformar URLs
+  const token = localStorage.getItem('moodle_token');
   const fileContent = module.contents?.find((c) => c.type === 'file');
-  const fileUrl = fileContent?.fileurl ?? module.url;
+  const rawFileUrl = fileContent?.fileurl ?? module.url;
+  // CORRECCIÓN: Transformar URL con token para archivos de pluginfile.php
+  const fileUrl = rawFileUrl ? getMoodleFileUrl(rawFileUrl, token) : rawFileUrl;
   const mimetype = fileContent?.mimetype ?? '';
   const filename = fileContent?.filename ?? module.name;
 
@@ -752,37 +778,6 @@ export function ModuleDetail() {
 
         {/* ── Sidebar ── */}
         <div className="space-y-4">
-          {/* Navegación entre secciones */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Navegación</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={goToPrevious}
-                  disabled={!hasPrevious}
-                  className="flex-1"
-                >
-                  <ChevronLeft className="w-4 h-4 mr-1" />
-                  Anterior
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={goToNext}
-                  disabled={!hasNext}
-                  className="flex-1"
-                >
-                  Siguiente
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Lista de todas las secciones */}
           <Card>
             <CardHeader>

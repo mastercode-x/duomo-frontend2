@@ -173,7 +173,7 @@ function PrivateLayout() {
 function App() {
   return (
     <AuthProvider>
-      <Router>
+      <Router basename="/app">
         <Routes>
           {/* Rutas Públicas */}
           <Route element={<PublicRoute />}>
@@ -280,7 +280,7 @@ function NotFoundPage() {
         La página que estás buscando no existe o ha sido movida.
       </p>
       <a 
-        href="/dashboard"
+        href="/app/dashboard"
         className="px-6 py-3 bg-gradient-to-r from-[#8B9A7D] to-[#6B7A5D] text-white font-medium rounded-lg hover:from-[#7A8970] hover:to-[#5A6950] transition-colors shadow-lg shadow-[#8B9A7D]/25"
       >
         Ir al Dashboard

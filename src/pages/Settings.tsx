@@ -1,6 +1,7 @@
 // Página de Configuración del Campus Duomo LMS
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Settings as SettingsIcon, 
   Bell, 
@@ -23,6 +24,7 @@ const MOODLE_BASE_URL = import.meta.env.VITE_MOODLE_BASE_URL || 'https://campus.
 
 export function Settings() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   
   const [notificationSettings, setNotificationSettings] = useState({
     emailMessages: true,
@@ -110,7 +112,7 @@ export function Settings() {
               <Button 
                 variant="outline" 
                 className="w-full justify-between"
-                onClick={() => window.location.href = '/profile/edit'}
+                onClick={() => navigate('/profile/edit')}
               >
                 <span>Editar perfil</span>
                 <ChevronRight className="w-4 h-4" />
