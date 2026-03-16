@@ -7,12 +7,6 @@ function buildFetchUrl(rawUrl: string, token: string): string {
   try {
     const parsed = new URL(rawUrl);
 
-    // user/icon es público — NO agregar token (causa que Moodle devuelva avatar default)
-    if (parsed.pathname.includes('/user/icon/')) {
-      parsed.searchParams.delete('token'); // quitar token si lo hubiera
-      return parsed.toString();
-    }
-
     // webservice/pluginfile.php → tokenpluginfile.php/TOKEN/path
     if (parsed.pathname.includes('/webservice/pluginfile.php')) {
       const path = parsed.pathname.replace('/webservice/pluginfile.php', '');
@@ -21,11 +15,10 @@ function buildFetchUrl(rawUrl: string, token: string): string {
       return `${MOODLE_BASE}/tokenpluginfile.php/${token}${path}${query ? '?' + query : ''}`;
     }
 
-    // pluginfile.php genérico → agregar token solo si no lo tiene
-    if (parsed.pathname.includes('/pluginfile.php')) {
-      if (token && !parsed.searchParams.has('token')) {
-        parsed.searchParams.set('token', token);
-      }
+    // pluginfile.php (user/icon y otros) → agregar token como query param
+    if (parsed.pathname.includes('/pluginfile.php') && token) {
+      parsed.searchParams.delete('token');
+      parsed.searchParams.set('token', token);
       return parsed.toString();
     }
 
