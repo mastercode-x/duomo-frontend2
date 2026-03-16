@@ -313,7 +313,8 @@ interface CourseCardProps {
 }
 
 function CourseCard({ course, getStatusBadge, isTeacher }: CourseCardProps) {
-  const courseImageUrl = useMoodleImageUrl(course.courseimage);
+  const courseImageUrl = course.courseimage; // ← directo, sin hook (ya tiene token)
+  const [imgError, setImgError] = useState(false); // ← estado reactivo
 
   const getCourseColor = (name: string) => {
     const colors = ['#8B9A7D', '#E8927C', '#6B8F71', '#D4845A', '#5C7A6B'];
@@ -329,28 +330,24 @@ function CourseCard({ course, getStatusBadge, isTeacher }: CourseCardProps) {
 
   return (
     <Card className="group hover:shadow-lg transition-shadow overflow-hidden">
-      {/* Course Image */}
       <div 
         className="relative h-40 overflow-hidden"
         style={{ backgroundColor: getCourseColor(course.fullname) }}
       >
-        {courseImageUrl && (
+        {courseImageUrl && !imgError ? (
           <img 
             src={courseImageUrl} 
             alt={course.fullname}
             className="w-full h-full object-cover"
-            onError={handleImageError}
+            onError={() => setImgError(true)} // ← limpio y reactivo
           />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <GraduationCap className="w-16 h-16 text-white/50" />
+          </div>
         )}
-        <div 
-          className="w-full h-full items-center justify-center"
-          style={{ display: courseImageUrl ? 'none' : 'flex' }}
-        >
-          <GraduationCap className="w-16 h-16 text-white/50" />
-        </div>
-        <div className="absolute top-3 right-3">
-          {getStatusBadge(course)}
-        </div>
+        {/* badges encima */}
+        <div className="absolute top-3 right-3">{getStatusBadge(course)}</div>
         {course.isfavourite && (
           <div className="absolute top-3 left-3">
             <Star className="w-5 h-5 text-yellow-300 fill-yellow-300" />
