@@ -1,9 +1,7 @@
 // Página de Login del Campus Duomo LMS - Rediseño 2025
 // Layout de dos columnas: formulario minimalista + panel visual
 
-
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Lock, User, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -14,7 +12,6 @@ import { DuomoLogo } from '@/components/DuomoLogo';
 
 export function Login() {
   const { login, error, clearError, isLoading } = useAuth();
-  const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
     username: '',
@@ -54,7 +51,7 @@ export function Login() {
         localStorage.removeItem('remember_username');
       }
       
-      navigate('/dashboard');
+      window.location.href = '/dashboard';
     }
   };
 
