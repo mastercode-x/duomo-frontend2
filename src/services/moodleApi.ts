@@ -1493,29 +1493,29 @@ class MoodleApiClient {
    * de pluginfile, la devuelve sin cambios.
    */
   private addTokenToPluginfileUrl(url: string, token: string): string {
-    if (!url || !token) return url || '';
-    
-    let result = url;
-    
-    // Si la URL contiene /pluginfile.php, transformarla al endpoint de webservice
-    if (result.includes('/pluginfile.php')) {
-      // Caso A: Ya es una URL de webservice pero le falta el token
-      if (result.includes('/webservice/pluginfile.php')) {
-        if (!result.includes('token=')) {
-          const separator = result.includes('?') ? '&' : '?';
-          result = `${result}${separator}token=${encodeURIComponent(token)}`;
-        }
-      } 
-      // Caso B: Es una URL normal de pluginfile, convertirla a webservice y agregar token
-      else {
-        result = result.replace('/pluginfile.php/', '/webservice/pluginfile.php/');
+  if (!url || !token) return url || '';
+
+  // user/icon son públicos en Moodle — NO necesitan webservice ni token
+  // Usar la URL original de pluginfile.php tal cual
+  if (url.includes('/user/icon/') || url.includes('/user/icon')) {
+    return url;
+  }
+
+  let result = url;
+  if (result.includes('/pluginfile.php')) {
+    if (result.includes('/webservice/pluginfile.php')) {
+      if (!result.includes('token=')) {
         const separator = result.includes('?') ? '&' : '?';
         result = `${result}${separator}token=${encodeURIComponent(token)}`;
       }
+    } else {
+      result = result.replace('/pluginfile.php/', '/webservice/pluginfile.php/');
+      const separator = result.includes('?') ? '&' : '?';
+      result = `${result}${separator}token=${encodeURIComponent(token)}`;
     }
-    
-    return result;
   }
+  return result;
+}
 
   private transformCourseDetail(data: any, contents: any[] = []): CourseDetail {
     const safeContents = Array.isArray(contents) ? contents : [];

@@ -8,8 +8,10 @@ export function useMoodleImageUrl(imageUrl: string | undefined): string | undefi
   return useMemo(() => {
     if (!imageUrl) return undefined;
 
+    // URLs públicas — sin proxy, sin transformación
     if (
       imageUrl.includes('gravatar.com') ||
+      imageUrl.includes('/user/icon/') ||   // ← avatares públicos de Moodle
       imageUrl.startsWith('data:') ||
       imageUrl.startsWith('blob:') ||
       imageUrl.startsWith('/')
@@ -17,6 +19,7 @@ export function useMoodleImageUrl(imageUrl: string | undefined): string | undefi
       return imageUrl;
     }
 
+    // Imágenes privadas de Moodle (overviewfiles, etc.) → proxy
     if (imageUrl.includes('campus.duomo.com.ar')) {
       let urlWithToken = imageUrl;
       if (imageUrl.includes('/pluginfile.php') && !imageUrl.includes('token=') && token) {
@@ -30,5 +33,4 @@ export function useMoodleImageUrl(imageUrl: string | undefined): string | undefi
   }, [imageUrl, token]);
 }
 
-// ← permite tanto: import { useMoodleImageUrl } como import useMoodleImageUrl
 export default useMoodleImageUrl;

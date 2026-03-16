@@ -1,24 +1,29 @@
 // api/image-proxy.ts
-// Proxy de imágenes de Moodle.
-// Convierte webservice/pluginfile.php?token=X  →  tokenpluginfile.php/X/...
-// porque webservice/pluginfile.php no tiene permisos para user/icon y otros tipos.
+// Proxy para imágenes de Moodle que son públicas pero bloqueadas por CORS en el browser.
+// course/overviewfiles y user/icon son públicos → usar /pluginfile.php/ sin token.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const ALLOWED_DOMAIN = 'campus.duomo.com.ar';
 const MOODLE_BASE = `https://${ALLOWED_DOMAIN}`;
 
-function toTokenPluginfileUrl(url: string): string {
+/**
+ * Convierte cualquier variante de URL de Moodle a la URL pública simple.
+ * webservice/pluginfile.php/ID/... + ?token=X  →  pluginfile.php/ID/...  (sin token)
+ */
+function toPublicPluginfileUrl(url: string): string {
   try {
     const parsed = new URL(url);
-    const token = parsed.searchParams.get('token');
-    if (!token) return url;
 
-    const path = parsed.pathname.replace('/webservice/pluginfile.php', '');
+    // Quitar el token del query string
     parsed.searchParams.delete('token');
-    const query = parsed.searchParams.toString();
 
-    return `${MOODLE_BASE}/tokenpluginfile.php/${token}${path}${query ? '?' + query : ''}`;
+    // Si es webservice/pluginfile.php, convertir a pluginfile.php simple
+    if (parsed.pathname.includes('/webservice/pluginfile.php')) {
+      parsed.pathname = parsed.pathname.replace('/webservice/pluginfile.php', '/pluginfile.php');
+    }
+
+    return parsed.toString();
   } catch {
     return url;
   }
@@ -31,61 +36,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Missing url parameter' });
   }
 
-  let targetUrl: string;
+  let originalUrl: string;
   try {
-    targetUrl = decodeURIComponent(url);
+    originalUrl = decodeURIComponent(url);
   } catch {
     return res.status(400).json({ error: 'Invalid url encoding' });
   }
 
-  let parsedUrl: URL;
-  try {
-    parsedUrl = new URL(targetUrl);
-  } catch {
-    return res.status(400).json({ error: 'Invalid URL' });
-  }
-
-  if (parsedUrl.hostname !== ALLOWED_DOMAIN) {
+  if (!originalUrl.includes(ALLOWED_DOMAIN)) {
     return res.status(403).json({ error: 'Domain not allowed' });
   }
 
-  const fetchUrl = targetUrl.includes('/webservice/pluginfile.php')
-    ? toTokenPluginfileUrl(targetUrl)
-    : targetUrl;
+  // Convertir a URL pública (sin webservice, sin token)
+  const publicUrl = toPublicPluginfileUrl(originalUrl);
+
+  console.log('Fetching:', publicUrl);
 
   try {
-    const response = await fetch(fetchUrl, {
+    const response = await fetch(publicUrl, {
       headers: {
+        'User-Agent': 'Mozilla/5.0',
         'Referer': `${MOODLE_BASE}/`,
-        'User-Agent': 'Mozilla/5.0 (compatible; CampusDuomo/1.0)',
       },
     });
 
     const contentType = response.headers.get('content-type') || '';
 
-    if (contentType.includes('application/json')) {
-      const errorBody = await response.text();
-      console.error('Moodle image error:', fetchUrl, errorBody);
-      return res.status(403).json({
-        error: 'Moodle denied access to image',
-        moodle_response: errorBody,
-        attempted_url: fetchUrl,
+    // Moodle devolvió error JSON o HTML en vez de imagen
+    if (!contentType.startsWith('image/')) {
+      const body = await response.text();
+      console.error('Not an image response:', response.status, contentType, body.substring(0, 300));
+      return res.status(response.status || 404).json({
+        error: 'Moodle did not return an image',
+        status: response.status,
+        contentType,
+        body: body.substring(0, 300),
+        attempted_url: publicUrl,
       });
     }
 
-    if (!response.ok) {
-      return res.status(response.status).json({ error: `Moodle returned ${response.status}` });
-    }
-
     const buffer = await response.arrayBuffer();
-
-    res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
-    res.setHeader('Content-Type', contentType || 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Length', buffer.byteLength);
-
     return res.status(200).send(Buffer.from(buffer));
-  } catch (error) {
-    console.error('Image proxy fetch error:', error);
-    return res.status(500).json({ error: 'Failed to fetch image' });
+
+  } catch (error: any) {
+    console.error('Fetch error:', error?.message);
+    return res.status(500).json({ error: 'Fetch failed', message: error?.message });
   }
 }
