@@ -558,25 +558,47 @@ class MoodleApiClient {
   // ============================================
 
   async getUserCourses(userid?: number): Promise<Course[]> {
-    const id = userid || this.getUserId();
-    
-    if (!id) {
-      console.warn('getUserCourses: No userid available');
-      return [];
-    }
-    
-    const params: Record<string, any> = { userid: id };
-    
-    const data = await this.request<any[]>('core_enrol_get_users_courses', params);
-    
-    // Validación defensiva
-    if (!Array.isArray(data)) {
-      console.warn('getUserCourses: Response is not an array', data);
-      return [];
-    }
-    
-    return data.map(course => this.transformCourse(course));
+  const id = userid || this.getUserId();
+ 
+  if (!id) {
+    console.warn('getUserCourses: No userid available');
+    return [];
   }
+ 
+  const data = await this.request<any[]>('core_enrol_get_users_courses', {
+    userid: id,
+  });
+ 
+  if (!Array.isArray(data)) {
+    console.warn('getUserCourses: Response is not an array', data);
+    return [];
+  }
+ 
+  // Enriquecer con overviewfiles en paralelo (necesario para imágenes de portada)
+  const enriched = await Promise.all(
+    data.map(async (course) => {
+      // Si ya trae overviewfiles con contenido, no hace falta otra llamada
+      if (Array.isArray(course.overviewfiles) && course.overviewfiles.length > 0) {
+        return course;
+      }
+      try {
+        const detail = await this.request<any>('core_course_get_courses_by_field', {
+          field: 'id',
+          value: course.id,
+        });
+        const courseDetail = detail?.courses?.[0];
+        if (courseDetail?.overviewfiles?.length) {
+          return { ...course, overviewfiles: courseDetail.overviewfiles };
+        }
+      } catch {
+        // silencioso — la imagen simplemente no cargará
+      }
+      return course;
+    })
+  );
+ 
+  return enriched.map((course) => this.transformCourse(course));
+}
 
   async getAllCourses(): Promise<Course[]> {
     try {
@@ -1391,40 +1413,45 @@ class MoodleApiClient {
   // ============================================
 
   private transformUser(data: any): User {
-    const token = this.getToken();
-    return {
-      id: data.id,
-      username: data.username || '',
-      firstname: data.firstname || '',
-      lastname: data.lastname || '',
-      fullname: data.fullname || `${data.firstname || ''} ${data.lastname || ''}`.trim(),
-      email: data.email || '',
-      profileimageurl: this.addTokenToPluginfileUrl(data.profileimageurl, token),
-      profileimageurlsmall: this.addTokenToPluginfileUrl(data.profileimageurlsmall, token),
-      department: data.department,
-      institution: data.institution,
-      city: data.city,
-      country: data.country,
-      timezone: data.timezone,
-      lang: data.lang,
-      phone1: data.phone1,
-      phone2: data.phone2,
-      address: data.address,
-      description: data.description,
-      firstaccess: data.firstaccess,
-      lastaccess: data.lastaccess,
-      lastcourseaccess: data.lastcourseaccess,
-      suspended: data.suspended,
-      roles: Array.isArray(data.roles) ? data.roles.map((r: any) => r.shortname || r) : [],
-      preferences: data.preferences,
-      customfields: Array.isArray(data.customfields) ? data.customfields.map((f: any) => ({
-        name: f.name,
-        value: f.value,
-        type: f.type,
-        shortname: f.shortname,
-      })) : [],
-    };
-  }
+  const token = this.getToken();
+ 
+  return {
+    id: data.id,
+    username: data.username || '',
+    firstname: data.firstname || '',
+    lastname: data.lastname || '',
+    fullname: data.fullname || `${data.firstname || ''} ${data.lastname || ''}`.trim(),
+    email: data.email || '',
+    profileimageurl: this.safeProfileImageUrl(data.profileimageurl, token),
+    profileimageurlsmall: this.safeProfileImageUrl(data.profileimageurlsmall, token),
+    department: data.department,
+    institution: data.institution,
+    city: data.city,
+    country: data.country,
+    timezone: data.timezone,
+    lang: data.lang,
+    phone1: data.phone1,
+    phone2: data.phone2,
+    address: data.address,
+    description: data.description,
+    firstaccess: data.firstaccess,
+    lastaccess: data.lastaccess,
+    lastcourseaccess: data.lastcourseaccess,
+    suspended: data.suspended,
+    roles: Array.isArray(data.roles)
+      ? data.roles.map((r: any) => r.shortname || r)
+      : [],
+    preferences: data.preferences,
+    customfields: Array.isArray(data.customfields)
+      ? data.customfields.map((f: any) => ({
+          name: f.name,
+          value: f.value,
+          type: f.type,
+          shortname: f.shortname,
+        }))
+      : [],
+  };
+}
 
   private transformCourse(data: any): Course {
     // Las imágenes de Moodle requieren autenticación. Convertir URLs de pluginfile.php
@@ -1552,6 +1579,25 @@ modules: Array.isArray(section.modules) ? section.modules.map((mod: any) => ({
       })),
     };
   }
+
+
+
+  private safeProfileImageUrl(url: string | undefined, token: string): string {
+  if (!url) return '';
+ 
+  // URLs que NO necesitan transformación (son públicas o externas)
+  const isExternal =
+    url.includes('gravatar.com') ||
+    url.includes('theme/image.php') ||
+    url.startsWith('data:') ||
+    url.startsWith('blob:') ||
+    url.startsWith('http') && !url.includes('campus.duomo.com.ar');
+ 
+  if (isExternal) return url;
+ 
+  // URLs de pluginfile propias de Moodle: sí necesitan token
+  return this.addTokenToPluginfileUrl(url, token);
+}
 }
 
 // ============================================

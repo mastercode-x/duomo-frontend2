@@ -50,17 +50,21 @@ export function Courses() {
     applyFilters();
   }, [courses, searchQuery, categoryFilter, statusFilter, sortBy]);
 
-  const loadCourses = async () => {
-    try {
-      setIsLoading(true);
-      const data = await moodleApi.getUserCourses();
-      setCourses(data);
-    } catch (error) {
-      console.error('Error al cargar cursos:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+const loadCourses = async () => {
+  try {
+    setIsLoading(true);
+    const data = await moodleApi.getUserCourses();
+    // 👇 AGREGAR ESTO TEMPORALMENTE
+    console.log('CURSOS RAW:', JSON.stringify(data.slice(0,2), null, 2));
+    console.log('overviewfiles[0]:', data[0]?.overviewfiles);
+    console.log('courseimage[0]:', data[0]?.courseimage);
+    setCourses(data);
+  } catch (error) {
+    console.error('Error al cargar cursos:', error);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const applyFilters = () => {
     let result = [...courses];

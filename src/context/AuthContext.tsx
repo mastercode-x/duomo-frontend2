@@ -106,6 +106,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const userProfile = await moodleApi.getUserProfile();
       
       setUser(userProfile);
+      console.log('USER profileimageurl:', userProfile.profileimageurl);
       setIsAuthenticated(true);
     } catch (err: any) {
       console.error('Error al verificar autenticación:', err);
