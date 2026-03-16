@@ -313,7 +313,7 @@ interface CourseCardProps {
 }
 
 function CourseCard({ course, getStatusBadge, isTeacher }: CourseCardProps) {
-  const courseImageUrl = course.courseimage; // ← directo, sin hook (ya tiene token)
+  const courseImageUrl = useMoodleImageUrl(course.courseimage); // ← directo, sin hook (ya tiene token)
   const [imgError, setImgError] = useState(false); // ← estado reactivo
 
   const getCourseColor = (name: string) => {
