@@ -1198,8 +1198,14 @@ class MoodleApiClient {
             return EXCLUDED_ROLE_IDS.has(rid);
           });
 
+          const EXCLUDED_ROLE_NAME_KEYWORDS = ['teacher', 'profesor', 'instructor', 'manager', 'admin'];
+const hasExcludedName = rawRoles.some((r: any) => {
+  const name = (r.name || '').toLowerCase();
+  return EXCLUDED_ROLE_NAME_KEYWORDS.some(kw => name.includes(kw));
+});
+
           // Si tiene roles y alguno es excluido, saltar este usuario
-          if (rawRoles.length > 0 && (hasExcludedShortname || hasExcludedRoleId)) {
+          if (rawRoles.length > 0 && (hasExcludedShortname || hasExcludedRoleId || hasExcludedName)) {
             return;
           }
 
@@ -1439,7 +1445,7 @@ class MoodleApiClient {
     // Las imágenes de Moodle requieren autenticación. Convertir URLs de pluginfile.php
     // al endpoint webservice/pluginfile.php con el token del usuario.
     const token = this.getToken();
-    const rawImageUrl: string | undefined = data.overviewfiles?.[0]?.fileurl;
+    const rawImageUrl: string | undefined = data.overviewfiles?.[0]?.fileurl ?? data.courseimage;
     const courseimage = rawImageUrl
       ? this.addTokenToPluginfileUrl(rawImageUrl, token)
       : undefined;

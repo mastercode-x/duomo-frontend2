@@ -452,47 +452,42 @@ export function ModuleDetail() {
   }, [selectedActivityIndex]);
 
   const loadModuleData = async (cId: number, mId: number) => {
-    try {
-      setIsLoading(true);
-      setError(null);
+  try {
+    setIsLoading(true);
+    setError(null);
 
-      const courseData = await moodleApi.getCourseById(cId);
-      const courseContent = await moodleApi.getCourseContent(cId);
+    const courseData = await moodleApi.getCourseById(cId);
 
-      if (!courseData) {
-        setError('No se pudo cargar el curso');
-        return;
-      }
-
-      const fullCourse: CourseDetail = {
-        ...courseData,
-        sections: courseContent,
-      };
-
-      setCourse(fullCourse);
-
-      // Encontrar la sección cuyo id coincide con moduleId
-      const sectionIndex = courseContent.findIndex((s: CourseSection) => s.id === mId);
-      if (sectionIndex !== -1) {
-        setCurrentSection(courseContent[sectionIndex]);
-        setCurrentSectionIndex(sectionIndex);
-        setSelectedActivityIndex(0);
-      } else {
-        setError('Módulo no encontrado');
-      }
-    } catch (err: unknown) {
-      console.error('Error al cargar módulo:', err);
-      setError('Error al cargar el módulo. Por favor intenta de nuevo.');
-    } finally {
-      setIsLoading(false);
+    if (!courseData) {
+      setError('No se pudo cargar el curso');
+      return;
     }
-  };
 
-  const navigateToSection = (index: number) => {
-    if (course?.sections?.[index]) {
-      navigate(`/courses/${course.id}/modules/${course.sections[index].id}`);
+    // courseData.sections ya vienen transformadas con tokens desde getCourseById
+    setCourse(courseData);
+
+    const sections = courseData.sections ?? [];
+    const sectionIndex = sections.findIndex((s: CourseSection) => s.id === mId);
+    if (sectionIndex !== -1) {
+      setCurrentSection(sections[sectionIndex]);
+      setCurrentSectionIndex(sectionIndex);
+      setSelectedActivityIndex(0);
+    } else {
+      setError('Módulo no encontrado');
     }
-  };
+  } catch (err: unknown) {
+    console.error('Error al cargar módulo:', err);
+    setError('Error al cargar el módulo. Por favor intenta de nuevo.');
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+ const navigateToSection = (index: number) => {
+  if (course?.sections?.[index]) {
+    navigate(`/courses/${course.id}/modules/${course.sections[index].id}`);
+  }
+};
 
   const goToPrevious = () => {
     if (currentSectionIndex > 0) navigateToSection(currentSectionIndex - 1);
@@ -776,55 +771,92 @@ export function ModuleDetail() {
           )}
         </div>
 
-        {/* ── Sidebar ── */}
-        <div className="space-y-4">
-          {/* Lista de todas las secciones */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Todos los Módulos</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto">
-                {course.sections?.map((section, index) => (
-                  <button
-                    key={section.id}
-                    onClick={() => navigateToSection(index)}
-                    className={cn(
-                      'w-full flex items-center gap-3 p-3 text-left transition-colors hover:bg-gray-50',
-                      index === currentSectionIndex
-                        ? 'bg-amber-50 border-l-4 border-amber-500'
-                        : 'border-l-4 border-transparent'
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        'w-6 h-6 rounded flex items-center justify-center text-xs font-medium flex-shrink-0',
-                        index === currentSectionIndex
-                          ? 'bg-amber-500 text-white'
-                          : index < currentSectionIndex
-                          ? 'bg-green-100 text-green-600'
-                          : 'bg-gray-100 text-gray-500'
-                      )}
-                    >
-                      {index < currentSectionIndex ? (
-                        <CheckCircle2 className="w-3 h-3" />
-                      ) : (
-                        index + 1
-                      )}
-                    </div>
-                    <span
-                      className={cn(
-                        'text-sm truncate',
-                        index === currentSectionIndex ? 'font-medium text-gray-900' : 'text-gray-600'
-                      )}
-                    >
-                      {section.name || `Módulo ${index + 1}`}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+       {/* ── Sidebar ── */}
+<div className="space-y-4">
+  {/* Lista de actividades del módulo actual */}
+  {activities.length > 1 && (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <BookOpen className="w-4 h-4 text-[#8B9A7D]" />
+          Actividades ({activities.length})
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="divide-y divide-gray-100">
+          {activities.map((activity, idx) => {
+            const Icon = getModuleIcon(activity.modname);
+            const isSelected = idx === selectedActivityIndex;
+            const isCompleted = activity.completiondata?.state === 1;
+            return (
+              <button
+                key={activity.id}
+                onClick={() => setSelectedActivityIndex(idx)}
+                className={cn(
+                  'w-full flex items-center gap-3 px-4 py-3 text-left transition-colors',
+                  isSelected
+                    ? 'bg-amber-50 border-l-4 border-amber-500'
+                    : 'border-l-4 border-transparent hover:bg-gray-50'
+                )}
+              >
+                <div className={cn(
+                  'w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0',
+                  isCompleted ? 'bg-green-100' : isSelected ? 'bg-amber-100' : 'bg-gray-100'
+                )}>
+                  {isCompleted
+                    ? <CheckCircle2 className="w-4 h-4 text-green-600" />
+                    : <Icon className={cn('w-4 h-4', isSelected ? 'text-amber-600' : 'text-gray-500')} />
+                  }
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={cn('text-xs font-medium truncate', isSelected ? 'text-gray-900' : 'text-gray-700')}>
+                    {idx + 1}. {activity.name}
+                  </p>
+                  <p className="text-[11px] text-gray-500">{getModuleLabel(activity.modname)}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  )}
+
+  {/* Lista de todas las secciones */}
+  <Card>
+    <CardHeader>
+      <CardTitle className="text-base">Todos los Módulos</CardTitle>
+    </CardHeader>
+    <CardContent className="p-0">
+      <div className="divide-y divide-gray-100 max-h-72 overflow-y-auto">
+        {course.sections?.map((section, index) => (
+          <button
+            key={section.id}
+            onClick={() => navigateToSection(index)}
+            className={cn(
+              'w-full flex items-center gap-3 p-3 text-left transition-colors hover:bg-gray-50',
+              index === currentSectionIndex
+                ? 'bg-amber-50 border-l-4 border-amber-500'
+                : 'border-l-4 border-transparent'
+            )}
+          >
+            <div className={cn(
+              'w-6 h-6 rounded flex items-center justify-center text-xs font-medium flex-shrink-0',
+              index === currentSectionIndex ? 'bg-amber-500 text-white'
+                : index < currentSectionIndex ? 'bg-green-100 text-green-600'
+                : 'bg-gray-100 text-gray-500'
+            )}>
+              {index < currentSectionIndex ? <CheckCircle2 className="w-3 h-3" /> : index + 1}
+            </div>
+            <span className={cn('text-sm truncate', index === currentSectionIndex ? 'font-medium text-gray-900' : 'text-gray-600')}>
+              {section.name || `Módulo ${index + 1}`}
+            </span>
+          </button>
+        ))}
+      </div>
+    </CardContent>
+  </Card>
+</div>
 
           {/* Info del curso */}
           <Card>
