@@ -1,6 +1,3 @@
-// hooks/useMoodleImageUrl.ts
-// Pasa las URLs de Moodle por el proxy incluyendo el token como param separado.
-
 import { useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -18,10 +15,14 @@ export function useMoodleImageUrl(imageUrl: string | undefined): string | undefi
       return imageUrl;
     }
 
-    // Pasar URL + token al proxy
+    // user/icon es público — usar directamente sin proxy ni token
+    if (imageUrl.includes('/user/icon/')) {
+      return imageUrl;
+    }
+
+    // Resto de URLs de Moodle → proxy con token
     const params = new URLSearchParams({ url: imageUrl });
     if (token) params.set('token', token);
-
     return `/api/image-proxy?${params.toString()}`;
   }, [imageUrl, token]);
 }
