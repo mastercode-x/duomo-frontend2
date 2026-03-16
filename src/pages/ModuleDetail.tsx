@@ -1,6 +1,4 @@
 // Página de Detalle de Módulo del Campus Duomo LMS
-// Muestra el contenido de una SECCIÓN del curso (que contiene múltiples actividades/módulos).
-// Cada actividad se renderiza según su tipo: supervideo, quiz, resource, forum, coursecertificate.
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
@@ -12,10 +10,8 @@ import {
   FileText,
   ChevronRight,
   ChevronLeft,
-  Home,
   GraduationCap,
   MessageSquare,
-  Award,
   AlertCircle,
   Clock,
   ExternalLink,
@@ -32,14 +28,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
 import { cn } from '@/lib/utils';
-import { getMoodleFileUrl } from '@/lib/moodleUtils';
 import { moodleApi } from '@/services/moodleApi';
 import type { CourseDetail, CourseSection, CourseModule } from '@/types';
 
@@ -49,64 +38,33 @@ import type { CourseDetail, CourseSection, CourseModule } from '@/types';
 
 function getModuleIcon(modname: string) {
   const map: Record<string, React.ElementType> = {
-    resource: FileText,
-    page: BookOpen,
-    forum: MessageSquare,
-    quiz: FileQuestion,
-    assign: FileText,
-    video: Video,
-    supervideo: Video,
-    hvp: PlayCircle,
-    h5pactivity: PlayCircle,
-    certificate: Trophy,
-    coursecertificate: Trophy,
-    url: ExternalLink,
-    folder: BookOpen,
-    scorm: PlayCircle,
+    resource: FileText, page: BookOpen, forum: MessageSquare,
+    quiz: FileQuestion, assign: FileText, video: Video,
+    supervideo: Video, hvp: PlayCircle, h5pactivity: PlayCircle,
+    certificate: Trophy, coursecertificate: Trophy,
+    url: ExternalLink, folder: BookOpen, scorm: PlayCircle,
   };
   return map[modname] ?? FileText;
 }
 
 function getModuleLabel(modname: string) {
   const labels: Record<string, string> = {
-    resource: 'Recurso',
-    page: 'Página',
-    forum: 'Foro',
-    quiz: 'Cuestionario',
-    assign: 'Tarea',
-    video: 'Video',
-    supervideo: 'Video',
-    hvp: 'Contenido Interactivo',
-    h5pactivity: 'Contenido Interactivo',
-    certificate: 'Certificado',
-    coursecertificate: 'Certificado',
-    label: 'Etiqueta',
-    url: 'Enlace',
-    book: 'Libro',
-    folder: 'Carpeta',
-    scorm: 'SCORM',
+    resource: 'Recurso', page: 'Página', forum: 'Foro',
+    quiz: 'Cuestionario', assign: 'Tarea', video: 'Video',
+    supervideo: 'Video', hvp: 'Contenido Interactivo',
+    h5pactivity: 'Contenido Interactivo', certificate: 'Certificado',
+    coursecertificate: 'Certificado', label: 'Etiqueta',
+    url: 'Enlace', book: 'Libro', folder: 'Carpeta', scorm: 'SCORM',
   };
   return labels[modname] ?? modname;
 }
 
-/**
- * Extrae la URL de embed de un video de YouTube o Vimeo.
- */
 function getVideoEmbedUrl(url: string): string | null {
   if (!url) return null;
-
-  const ytMatch = url.match(
-    /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
-  );
-  if (ytMatch) {
-    return `https://www.youtube.com/embed/${ytMatch[1]}?rel=0&modestbranding=1`;
-  }
-
+  const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}?rel=0&modestbranding=1`;
   const vimeoMatch = url.match(/(?:vimeo\.com\/(?:video\/)?|player\.vimeo\.com\/video\/)(\d+)/);
-  if (vimeoMatch) {
-    return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
-  }
-
+  if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
   return null;
 }
 
@@ -115,17 +73,13 @@ function isDirectVideoUrl(url: string): boolean {
 }
 
 // ─────────────────────────────────────────────
-// Sub-componentes de renderizado por tipo
+// Sub-componentes
 // ─────────────────────────────────────────────
 
-/** supervideo / video: YouTube, Vimeo o archivo mp4 */
 function VideoPlayer({ module }: { module: CourseModule }) {
   const rawUrl = module.url ?? '';
   const embedUrl = getVideoEmbedUrl(rawUrl);
-
-  const mp4Content = module.contents?.find(
-    (c) => c.type === 'file' && c.mimetype?.startsWith('video/')
-  );
+  const mp4Content = module.contents?.find((c) => c.type === 'file' && c.mimetype?.startsWith('video/'));
   const mp4Url = mp4Content?.fileurl ?? (isDirectVideoUrl(rawUrl) ? rawUrl : null);
 
   if (embedUrl) {
@@ -134,17 +88,14 @@ function VideoPlayer({ module }: { module: CourseModule }) {
         <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
           <iframe
             className="absolute inset-0 w-full h-full rounded-lg"
-            src={embedUrl}
-            title={module.name}
+            src={embedUrl} title={module.name}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           />
         </div>
         {module.description && (
-          <div
-            className="prose max-w-none text-sm text-gray-600"
-            dangerouslySetInnerHTML={{ __html: module.description }}
-          />
+          <div className="prose max-w-none text-sm text-gray-600"
+            dangerouslySetInnerHTML={{ __html: module.description }} />
         )}
       </div>
     );
@@ -153,19 +104,12 @@ function VideoPlayer({ module }: { module: CourseModule }) {
   if (mp4Url) {
     return (
       <div className="space-y-3">
-        <video
-          className="w-full rounded-lg bg-black"
-          controls
-          src={mp4Url}
-          title={module.name}
-        >
+        <video className="w-full rounded-lg bg-black" controls src={mp4Url} title={module.name}>
           Tu navegador no soporta la reproducción de video.
         </video>
         {module.description && (
-          <div
-            className="prose max-w-none text-sm text-gray-600"
-            dangerouslySetInnerHTML={{ __html: module.description }}
-          />
+          <div className="prose max-w-none text-sm text-gray-600"
+            dangerouslySetInnerHTML={{ __html: module.description }} />
         )}
       </div>
     );
@@ -178,41 +122,21 @@ function VideoPlayer({ module }: { module: CourseModule }) {
       </div>
       <div className="text-center text-white">
         <p className="font-semibold text-lg">{module.name}</p>
-        <p className="text-sm text-white/70 mt-1">
-          Este video se reproduce en la plataforma Duomo
-        </p>
+        <p className="text-sm text-white/70 mt-1">Este video se reproduce en la plataforma Duomo</p>
       </div>
       {rawUrl && (
-        <Button
-          size="lg"
-          className="bg-[#E8927C] hover:bg-[#D4845A] text-white mt-2"
-          asChild
-        >
+        <Button size="lg" className="bg-[#E8927C] hover:bg-[#D4845A] text-white mt-2" asChild>
           <a href={rawUrl} target="_blank" rel="noopener noreferrer">
-            <PlayCircle className="w-5 h-5 mr-2" />
-            Ver video
+            <PlayCircle className="w-5 h-5 mr-2" />Ver video
             <ExternalLink className="w-4 h-4 ml-2" />
           </a>
         </Button>
-      )}
-      {module.completiondata?.state === 1 && (
-        <Badge className="bg-green-500 text-white absolute top-4 right-4">
-          <CheckCircle2 className="w-3 h-3 mr-1" />
-          Completado
-        </Badge>
       )}
     </div>
   );
 }
 
-/** quiz / forum / coursecertificate: abrir en nueva pestaña */
-function ExternalModuleCard({
-  module,
-  icon: Icon,
-  label,
-  actionLabel,
-  colorClass,
-}: {
+function ExternalModuleCard({ module, icon: Icon, label, actionLabel, colorClass }: {
   module: CourseModule;
   icon: React.ElementType;
   label: string;
@@ -225,22 +149,17 @@ function ExternalModuleCard({
         <Icon className="w-12 h-12" />
       </div>
       <div className="text-center">
-        <Badge variant="secondary" className="mb-2">
-          {label}
-        </Badge>
+        <Badge variant="secondary" className="mb-2">{label}</Badge>
         <h3 className="text-xl font-semibold text-gray-900">{module.name}</h3>
         {module.description && (
-          <div
-            className="prose max-w-none text-sm text-gray-600 mt-3"
-            dangerouslySetInnerHTML={{ __html: module.description }}
-          />
+          <div className="prose max-w-none text-sm text-gray-600 mt-3"
+            dangerouslySetInnerHTML={{ __html: module.description }} />
         )}
       </div>
       {module.url && (
         <Button size="lg" asChild>
           <a href={module.url} target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="w-5 h-5 mr-2" />
-            {actionLabel}
+            <ExternalLink className="w-5 h-5 mr-2" />{actionLabel}
           </a>
         </Button>
       )}
@@ -248,20 +167,16 @@ function ExternalModuleCard({
   );
 }
 
-/** resource: PDF, imagen u otro archivo */
 function ResourceViewer({ module }: { module: CourseModule }) {
-  const token = localStorage.getItem('moodle_token');
+  // ✅ Los fileurl ya vienen con token desde transformCourseDetail en moodleApi.
+  // NO se necesita transformar acá — la URL ya es webservice/pluginfile.php?token=...
   const fileContent = module.contents?.find((c) => c.type === 'file');
-  const rawFileUrl = fileContent?.fileurl ?? module.url;
-  // Transformar URL con token para archivos de pluginfile.php
-  const fileUrl = rawFileUrl ? getMoodleFileUrl(rawFileUrl, token) : rawFileUrl;
+  const fileUrl = fileContent?.fileurl ?? module.url;
   const mimetype = fileContent?.mimetype ?? '';
   const filename = fileContent?.filename ?? module.name;
 
   const isPdf = mimetype === 'application/pdf' || /\.pdf(\?.*)?$/i.test(fileUrl ?? '');
-  const isImage =
-    mimetype.startsWith('image/') ||
-    /\.(png|jpg|jpeg|gif|webp|svg)(\?.*)?$/i.test(fileUrl ?? '');
+  const isImage = mimetype.startsWith('image/') || /\.(png|jpg|jpeg|gif|webp|svg)(\?.*)?$/i.test(fileUrl ?? '');
 
   if (!fileUrl) {
     return (
@@ -275,48 +190,36 @@ function ResourceViewer({ module }: { module: CourseModule }) {
   return (
     <div className="space-y-4">
       {module.description && (
-        <div
-          className="prose max-w-none text-sm text-gray-600"
-          dangerouslySetInnerHTML={{ __html: module.description }}
-        />
+        <div className="prose max-w-none text-sm text-gray-600"
+          dangerouslySetInnerHTML={{ __html: module.description }} />
       )}
-
       {isPdf && (
         <div className="border rounded-lg overflow-hidden" style={{ height: '70vh' }}>
           <iframe src={fileUrl} title={filename} className="w-full h-full" />
         </div>
       )}
-
       {isImage && (
         <div className="flex justify-center">
-          <img
-            src={fileUrl}
-            alt={filename}
-            className="max-w-full rounded-lg border shadow-sm"
-          />
+          <img src={fileUrl} alt={filename} className="max-w-full rounded-lg border shadow-sm" />
         </div>
       )}
-
       <div className="flex flex-wrap gap-3 pt-2">
         {(isPdf || isImage) && (
           <Button variant="outline" asChild>
             <a href={fileUrl} target="_blank" rel="noopener noreferrer">
-              <Eye className="w-4 h-4 mr-2" />
-              Ver en pantalla completa
+              <Eye className="w-4 h-4 mr-2" />Ver en pantalla completa
             </a>
           </Button>
         )}
         <Button asChild>
           <a href={fileUrl} download={filename} target="_blank" rel="noopener noreferrer">
-            <Download className="w-4 h-4 mr-2" />
-            Descargar {filename}
+            <Download className="w-4 h-4 mr-2" />Descargar {filename}
           </a>
         </Button>
         {!isPdf && !isImage && (
           <Button variant="outline" asChild>
             <a href={fileUrl} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="w-4 h-4 mr-2" />
-              Abrir archivo
+              <ExternalLink className="w-4 h-4 mr-2" />Abrir archivo
             </a>
           </Button>
         )}
@@ -325,71 +228,38 @@ function ResourceViewer({ module }: { module: CourseModule }) {
   );
 }
 
-/** Renderizador principal de una actividad según su modname */
 function ModuleActivityRenderer({ module }: { module: CourseModule }) {
   const { modname } = module;
+  if (modname === 'supervideo' || modname === 'video') return <VideoPlayer module={module} />;
+  if (modname === 'quiz') return (
+    <ExternalModuleCard module={module} icon={FileQuestion} label="Cuestionario"
+      actionLabel="Iniciar cuestionario" colorClass="bg-blue-100 text-blue-600" />
+  );
+  if (modname === 'forum') return (
+    <ExternalModuleCard module={module} icon={MessageSquare} label="Foro"
+      actionLabel="Ir al foro" colorClass="bg-purple-100 text-purple-600" />
+  );
+  if (modname === 'coursecertificate' || modname === 'certificate') return (
+    <ExternalModuleCard module={module} icon={Trophy} label="Certificado"
+      actionLabel="Ver certificado" colorClass="bg-amber-100 text-amber-600" />
+  );
+  if (modname === 'resource') return <ResourceViewer module={module} />;
 
-  if (modname === 'supervideo' || modname === 'video') {
-    return <VideoPlayer module={module} />;
-  }
-  if (modname === 'quiz') {
-    return (
-      <ExternalModuleCard
-        module={module}
-        icon={FileQuestion}
-        label="Cuestionario"
-        actionLabel="Iniciar cuestionario"
-        colorClass="bg-blue-100 text-blue-600"
-      />
-    );
-  }
-  if (modname === 'forum') {
-    return (
-      <ExternalModuleCard
-        module={module}
-        icon={MessageSquare}
-        label="Foro"
-        actionLabel="Ir al foro"
-        colorClass="bg-purple-100 text-purple-600"
-      />
-    );
-  }
-  if (modname === 'coursecertificate' || modname === 'certificate') {
-    return (
-      <ExternalModuleCard
-        module={module}
-        icon={Trophy}
-        label="Certificado"
-        actionLabel="Ver certificado"
-        colorClass="bg-amber-100 text-amber-600"
-      />
-    );
-  }
-  if (modname === 'resource') {
-    return <ResourceViewer module={module} />;
-  }
-
-  // Fallback genérico
   return (
     <div className="flex flex-col items-center gap-4 py-8 text-center">
       <BookOpen className="w-16 h-16 text-gray-300" />
       <div>
-        <Badge variant="secondary" className="mb-2">
-          {getModuleLabel(modname)}
-        </Badge>
+        <Badge variant="secondary" className="mb-2">{getModuleLabel(modname)}</Badge>
         <h3 className="text-lg font-semibold text-gray-900">{module.name}</h3>
         {module.description && (
-          <div
-            className="prose max-w-none text-sm text-gray-600 mt-3"
-            dangerouslySetInnerHTML={{ __html: module.description }}
-          />
+          <div className="prose max-w-none text-sm text-gray-600 mt-3"
+            dangerouslySetInnerHTML={{ __html: module.description }} />
         )}
       </div>
       {module.url && (
         <Button asChild>
           <a href={module.url} target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="w-4 h-4 mr-2" />
-            Abrir actividad
+            <ExternalLink className="w-4 h-4 mr-2" />Abrir actividad
           </a>
         </Button>
       )}
@@ -429,8 +299,8 @@ export function ModuleDetail() {
       setIsLoading(true);
       setError(null);
 
-      // FIX: usar courseData.sections directamente (ya contienen los tokens)
-      // NO sobreescribir con courseContent crudo
+      // ✅ FIX CRÍTICO: getCourseById ya incluye sections con tokens en fileurl.
+      // NO sobreescribir con getCourseContent() → eso borra los tokens de las URLs.
       const courseData = await moodleApi.getCourseById(cId);
 
       if (!courseData) {
@@ -458,7 +328,6 @@ export function ModuleDetail() {
     }
   };
 
-  // FIX: navegación usa course.sections (ya transformadas)
   const navigateToSection = (index: number) => {
     if (course?.sections?.[index]) {
       navigate(`/courses/${course.id}/modules/${course.sections[index].id}`);
@@ -468,11 +337,9 @@ export function ModuleDetail() {
   const goToPrevious = () => {
     if (currentSectionIndex > 0) navigateToSection(currentSectionIndex - 1);
   };
-
   const goToNext = () => {
-    if (course && currentSectionIndex < (course.sections?.length ?? 0) - 1) {
+    if (course && currentSectionIndex < (course.sections?.length ?? 0) - 1)
       navigateToSection(currentSectionIndex + 1);
-    }
   };
 
   if (isLoading) return <ModuleDetailSkeleton />;
@@ -481,8 +348,7 @@ export function ModuleDetail() {
     return (
       <div className="space-y-6">
         <Button variant="ghost" onClick={() => navigate(`/courses/${courseId}`)}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Volver al curso
+          <ArrowLeft className="w-4 h-4 mr-2" />Volver al curso
         </Button>
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -495,11 +361,9 @@ export function ModuleDetail() {
   const hasPrevious = currentSectionIndex > 0;
   const hasNext = course.sections != null && currentSectionIndex < course.sections.length - 1;
   const totalSections = course.sections?.length ?? 0;
-
   const completedSections = currentSectionIndex;
   const progress = totalSections > 0 ? (completedSections / totalSections) * 100 : 0;
 
-  // Actividades visibles (sin labels vacíos)
   const activities = (currentSection.modules ?? []).filter(
     (m) => m.modname !== 'label' && m.uservisible !== false
   );
@@ -507,101 +371,64 @@ export function ModuleDetail() {
 
   return (
     <div className="space-y-4">
-      {/* ── Breadcrumb ── */}
-      <Breadcrumb>
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link to="/courses" className="flex items-center gap-1">
-              <Home className="w-4 h-4" />
-              Cursos
-            </Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link to={`/courses/${course.id}`} className="flex items-center gap-1">
-              <GraduationCap className="w-4 h-4" />
-              {course.fullname}
-            </Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <span className="font-medium text-gray-900 truncate max-w-[200px]">
-            {currentSection.name}
-          </span>
-        </BreadcrumbItem>
-      </Breadcrumb>
 
-      {/* ── Header de navegación mejorado (sin encimamiento) ── */}
-      <div className="flex items-center justify-between gap-4 py-2 px-4 bg-white border rounded-xl shadow-sm">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate(`/courses/${course.id}`)}
-          className="flex-shrink-0"
-        >
+      {/* ── Barra de navegación única (reemplaza breadcrumb + header separado) ── */}
+      <div className="flex items-center justify-between gap-2 py-2 px-4 bg-white border rounded-xl shadow-sm">
+        <Button variant="ghost" size="sm" onClick={() => navigate(`/courses/${course.id}`)}>
           <ArrowLeft className="w-4 h-4 mr-1" />
           <span className="hidden sm:inline">Volver</span>
         </Button>
 
-        <div className="flex items-center gap-2 min-w-0 flex-1 justify-center">
-          <span className="font-medium text-gray-900 truncate max-w-[200px] hidden sm:block text-sm">
+        <div className="flex items-center gap-1 text-sm text-gray-500 min-w-0 flex-1 justify-center">
+          <Link to="/courses" className="hover:text-amber-600 transition-colors hidden md:inline">
+            Cursos
+          </Link>
+          <ChevronRight className="w-3 h-3 flex-shrink-0 text-gray-300 hidden md:inline" />
+          <Link
+            to={`/courses/${course.id}`}
+            className="hover:text-amber-600 transition-colors truncate max-w-[140px] hidden md:inline"
+          >
+            {course.fullname}
+          </Link>
+          <ChevronRight className="w-3 h-3 flex-shrink-0 text-gray-300 hidden md:inline" />
+          <span className="font-medium text-gray-900 truncate max-w-[160px]">
             {currentSection.name}
           </span>
-          <span className="text-gray-400 hidden sm:block">·</span>
-          <span className="text-sm text-gray-500 whitespace-nowrap flex-shrink-0">
+          <span className="text-gray-400 ml-2 flex-shrink-0 text-xs whitespace-nowrap">
             {currentSectionIndex + 1} / {totalSections}
           </span>
         </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={goToPrevious}
-            disabled={!hasPrevious}
-            className="px-2 sm:px-3"
-          >
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <Button variant="outline" size="sm" onClick={goToPrevious} disabled={!hasPrevious}>
             <ChevronLeft className="w-4 h-4" />
             <span className="hidden sm:inline ml-1">Anterior</span>
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={goToNext}
-            disabled={!hasNext}
-            className="px-2 sm:px-3"
-          >
+          <Button variant="outline" size="sm" onClick={goToNext} disabled={!hasNext}>
             <span className="hidden sm:inline mr-1">Siguiente</span>
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
       </div>
 
-      {/* ── Título de la sección ── */}
+      {/* ── Título ── */}
       <div>
         <div className="flex items-center gap-2 mb-1">
           <Badge variant="secondary" className="bg-amber-100 text-amber-700">
             Módulo {currentSectionIndex + 1}
           </Badge>
           {currentSection.visible === false && (
-            <Badge variant="outline" className="text-gray-500">
-              Oculto
-            </Badge>
+            <Badge variant="outline" className="text-gray-500">Oculto</Badge>
           )}
         </div>
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{currentSection.name}</h1>
         {currentSection.summary && (
-          <div
-            className="prose max-w-none mt-2 text-gray-600"
-            dangerouslySetInnerHTML={{ __html: currentSection.summary }}
-          />
+          <div className="prose max-w-none mt-2 text-gray-600"
+            dangerouslySetInnerHTML={{ __html: currentSection.summary }} />
         )}
       </div>
 
-      {/* ── Barra de progreso (solo estudiantes) ── */}
+      {/* ── Progreso (solo estudiantes) ── */}
       {!isTeacher && (
         <Card>
           <CardContent className="p-4">
@@ -611,16 +438,16 @@ export function ModuleDetail() {
             </div>
             <Progress value={progress} className="h-2" />
             <p className="text-xs text-gray-500 mt-2">
-              Has completado {completedSections} de {totalSections} módulos
+              {completedSections} de {totalSections} módulos completados
             </p>
           </CardContent>
         </Card>
       )}
 
-      {/* ── Layout principal ── */}
+      {/* ── Layout ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* ── Columna principal: solo el contenido de la actividad ── */}
+        {/* Columna principal */}
         <div className="lg:col-span-2 space-y-4" ref={contentRef}>
           {activities.length === 0 ? (
             <Card>
@@ -643,9 +470,7 @@ export function ModuleDetail() {
                       );
                     })()}
                     <div>
-                      <CardTitle className="text-lg leading-tight">
-                        {selectedActivity.name}
-                      </CardTitle>
+                      <CardTitle className="text-lg leading-tight">{selectedActivity.name}</CardTitle>
                       <Badge variant="outline" className="mt-1 text-xs">
                         {getModuleLabel(selectedActivity.modname)}
                       </Badge>
@@ -653,8 +478,7 @@ export function ModuleDetail() {
                   </div>
                   {selectedActivity.completiondata?.state === 1 && (
                     <Badge className="bg-green-100 text-green-700 border-0 flex-shrink-0">
-                      <CheckCircle2 className="w-3 h-3 mr-1" />
-                      Completado
+                      <CheckCircle2 className="w-3 h-3 mr-1" />Completado
                     </Badge>
                   )}
                 </div>
@@ -666,10 +490,10 @@ export function ModuleDetail() {
           ) : null}
         </div>
 
-        {/* ── Sidebar ── */}
+        {/* Sidebar */}
         <div className="space-y-4">
 
-          {/* Lista de actividades del módulo actual (solo si hay más de una) */}
+          {/* Actividades del módulo actual */}
           {activities.length > 1 && (
             <Card>
               <CardHeader className="pb-2">
@@ -695,47 +519,24 @@ export function ModuleDetail() {
                             : 'border-l-4 border-transparent hover:bg-gray-50'
                         )}
                       >
-                        <div
-                          className={cn(
-                            'w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0',
-                            isCompleted
-                              ? 'bg-green-100'
-                              : isSelected
-                              ? 'bg-amber-100'
-                              : 'bg-gray-100'
-                          )}
-                        >
-                          {isCompleted ? (
-                            <CheckCircle2 className="w-4 h-4 text-green-600" />
-                          ) : (
-                            <Icon
-                              className={cn(
-                                'w-4 h-4',
-                                isSelected ? 'text-amber-600' : 'text-gray-500'
-                              )}
-                            />
-                          )}
+                        <div className={cn(
+                          'w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0',
+                          isCompleted ? 'bg-green-100' : isSelected ? 'bg-amber-100' : 'bg-gray-100'
+                        )}>
+                          {isCompleted
+                            ? <CheckCircle2 className="w-4 h-4 text-green-600" />
+                            : <Icon className={cn('w-4 h-4', isSelected ? 'text-amber-600' : 'text-gray-500')} />
+                          }
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p
-                            className={cn(
-                              'text-xs font-medium truncate',
-                              isSelected ? 'text-gray-900' : 'text-gray-700'
-                            )}
-                          >
+                          <p className={cn('text-xs font-medium truncate',
+                            isSelected ? 'text-gray-900' : 'text-gray-700')}>
                             {idx + 1}. {activity.name}
                           </p>
-                          <p className="text-[11px] text-gray-500">
-                            {getModuleLabel(activity.modname)}
-                          </p>
+                          <p className="text-[11px] text-gray-500">{getModuleLabel(activity.modname)}</p>
                         </div>
                         {isCompleted && (
-                          <Badge
-                            variant="secondary"
-                            className="text-[10px] bg-green-100 text-green-700 flex-shrink-0 px-1.5"
-                          >
-                            ✓
-                          </Badge>
+                          <CheckCircle2 className="w-3 h-3 text-green-600 flex-shrink-0" />
                         )}
                       </button>
                     );
@@ -745,10 +546,13 @@ export function ModuleDetail() {
             </Card>
           )}
 
-          {/* Lista de todas las secciones del curso */}
+          {/* Todos los módulos del curso */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Todos los Módulos</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2">
+                <GraduationCap className="w-4 h-4 text-[#8B9A7D]" />
+                Módulos del curso
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y divide-gray-100 max-h-72 overflow-y-auto">
@@ -763,30 +567,18 @@ export function ModuleDetail() {
                         : 'border-l-4 border-transparent'
                     )}
                   >
-                    <div
-                      className={cn(
-                        'w-6 h-6 rounded flex items-center justify-center text-xs font-medium flex-shrink-0',
-                        index === currentSectionIndex
-                          ? 'bg-amber-500 text-white'
-                          : index < currentSectionIndex
-                          ? 'bg-green-100 text-green-600'
-                          : 'bg-gray-100 text-gray-500'
-                      )}
-                    >
-                      {index < currentSectionIndex ? (
-                        <CheckCircle2 className="w-3 h-3" />
-                      ) : (
-                        index + 1
-                      )}
+                    <div className={cn(
+                      'w-6 h-6 rounded flex items-center justify-center text-xs font-medium flex-shrink-0',
+                      index === currentSectionIndex ? 'bg-amber-500 text-white'
+                        : index < currentSectionIndex ? 'bg-green-100 text-green-600'
+                        : 'bg-gray-100 text-gray-500'
+                    )}>
+                      {index < currentSectionIndex
+                        ? <CheckCircle2 className="w-3 h-3" />
+                        : index + 1}
                     </div>
-                    <span
-                      className={cn(
-                        'text-sm truncate',
-                        index === currentSectionIndex
-                          ? 'font-medium text-gray-900'
-                          : 'text-gray-600'
-                      )}
-                    >
+                    <span className={cn('text-sm truncate',
+                      index === currentSectionIndex ? 'font-medium text-gray-900' : 'text-gray-600')}>
                       {section.name || `Módulo ${index + 1}`}
                     </span>
                   </button>
@@ -795,7 +587,7 @@ export function ModuleDetail() {
             </CardContent>
           </Card>
 
-          {/* Info del curso */}
+          {/* Info */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Información</CardTitle>
@@ -817,36 +609,28 @@ export function ModuleDetail() {
               </div>
             </CardContent>
           </Card>
-
         </div>
       </div>
     </div>
   );
 }
 
-// ─────────────────────────────────────────────
-// Skeleton de carga
-// ─────────────────────────────────────────────
-
 function ModuleDetailSkeleton() {
   return (
     <div className="space-y-4">
-      <Skeleton className="h-6 w-64" />
-      <Skeleton className="h-14 w-full rounded-xl" />
+      <Skeleton className="h-12 w-full rounded-xl" />
       <div>
         <Skeleton className="h-6 w-24 mb-2" />
-        <Skeleton className="h-10 w-96" />
-        <Skeleton className="h-12 w-full mt-3" />
+        <Skeleton className="h-9 w-80" />
       </div>
-      <Skeleton className="h-16 w-full" />
+      <Skeleton className="h-14 w-full" />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
+        <div className="lg:col-span-2">
           <Skeleton className="h-64 w-full" />
         </div>
         <div className="space-y-4">
           <Skeleton className="h-48 w-full" />
           <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-28 w-full" />
         </div>
       </div>
     </div>
